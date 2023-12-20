@@ -1,0 +1,48 @@
+[[project]]
+name = "turnip-counter"
+desc = "count a peach player's item pulls from a collection of slippi replays"
+tags = ["ssbm", "rust"]
+links = [
+  { name = "djanatyn/turnip-counter", url = "https://github.com/djanatyn/turnip-counter" },
+]
+
+[[project]]
+name = "ssbm-nix"
+desc = "nix expressions for ssbm players"
+tags = ["ssbm", "nix"]
+links = [
+  { name = "djanatyn/ssbm-nix", url = "https://github.com/djanatyn/ssbm-nix" },
+]
+
+[[project]]
+name = "melee-inject"
+desc = "traverse ssbm gcm filesystem table to replace character DAT files"
+tags = ["ssbm", "rust"]
+links = [
+  { name = "recurse center presentation", url = "https://www.youtube.com/watch?v=KejJrmT590g" },
+  { name = "djanatyn/melee-inject", url = "https://github.com/djanatyn/melee-inject" },
+]
+
+[[project]]
+name = "fetch-followers"
+desc = "use tokio to create daily sqlite database of twitter followers/following"
+tags = ["rust", "tokio", "sqlite"]
+links = [
+  { name = "djanatyn/fetch-followers", url = "https://github.com/djanatyn/fetch-followers" },
+]
+
+[[project]]
+name = "resume"
+desc = "build a resume using haskell, dhall, and nix"
+tags = ["haskell", "nix"]
+links = [
+  { name = "djanatyn/resume", url = "https://github.com/djanatyn/resume" },
+]
+
+[[project]]
+name = "rpg-bot"
+desc = "control fceux from rust over a socket to play rpgs"
+tags = ["unfinished", "fceux", "lua", "rust"]
+links = [
+  { name = "djanatyn/rpg-bot", url = "https://github.com/djanatyn/rpg-bot" },
+]
