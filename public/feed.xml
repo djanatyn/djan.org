@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+	<title>djan.org</title>
+	<subtitle>structure admirer djan</subtitle>
+	<link href="https://djan.org/feed.xml" rel="self" type="application/atom+xml"/>
+    <link href="https://djan.org"/>
+	<updated>2023-12-20T00:00:00+00:00</updated>
+	<id>https://djan.org/feed.xml</id>
+	<entry xml:lang="en">
+		<title>understanding melee peach item pull rng logic</title>
+		<published>2023-12-20T00:00:00+00:00</published>
+		<updated>2023-12-20T00:00:00+00:00</updated>
+		<link href="https://djan.org/blog/peach-rng1/" type="text/html"/>
+		<id>https://djan.org/blog/peach-rng1/</id>
+		<content type="html">&lt;h1 id=&quot;peach-pulls-mystery-items&quot;&gt;peach pulls mystery items&lt;a class=&quot;zola-anchor&quot; href=&quot;#peach-pulls-mystery-items&quot; aria-label=&quot;Anchor link for: peach-pulls-mystery-items&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;as a melee peach player, i spend a lot of my time pulling random items out of the ground.&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;peach-turnip-pull.gif&quot;  alt=&quot;gif of peach pulling a turnip&quot;&gt;
+    
+    &lt;figcaption&gt;image from ssbwiki&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;princess peach has a special move called &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;www.ssbwiki.com&#x2F;Vegetable&quot;&gt;&amp;quot;Vegetable&amp;quot;&lt;&#x2F;a&gt;, activated by pressing down-special while grounded. if peach is able to complete her pull animation successfully, she retrieves an item from the ground - either a turnip, a bobomb, a beamsword, or a mr saturn (with turnips being the most common). it&#x27;s a defining move for her character, and for many players is the default option to consider when in a safe position. although she loses access to a few options while holding a turnip (most notably grab), the possibility of throwing it at an opponent demands respect. it can open up new approaches, enable otherwise impossible combo routes, and empowers her to interact with her opponent from a distance.&lt;&#x2F;p&gt;
+&lt;p&gt;over the 20+ year history of the game, the community has created resources to help players understand how often to expect particular outcomes. this image is what i see referenced most often:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;expected-frequency-chart.png&quot;  alt=&quot;table of peach item pull percentages&quot;&gt;
+    
+    &lt;figcaption&gt;credit: Magus420&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;as shown above, not all pulls are equally likely. there are different kinds of turnips, and some turnips do more damage than others. some sequences of pulls are highly valuable, but extremely unlikely to occur - pulling two stitchfaces in a row (especially &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;www.youtube.com&#x2F;watch?v=rrzFeWC5kmc&quot;&gt;when you know how to use them&lt;&#x2F;a&gt;) is considered a special occassion. there are even advanced techniques like &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;smashboards.com&#x2F;threads&#x2F;postmodern-rng-tactics-knitting-panning-theory-discussion.414626&#x2F;&quot;&gt;knitting&lt;&#x2F;a&gt; that allow peach to continuously pull items faster than she could normally.&lt;&#x2F;p&gt;
+&lt;p&gt;understanding how turnip rng works won&#x27;t give you any competitive advantage in the game. but it is fun! so, let&#x27;s continue.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;counting-turnips&quot;&gt;counting turnips&lt;a class=&quot;zola-anchor&quot; href=&quot;#counting-turnips&quot; aria-label=&quot;Anchor link for: counting-turnips&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;when playing melee online these days, it&#x27;s common to record game records using the &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;project-slippi&#x2F;slippi-wiki&#x2F;blob&#x2F;master&#x2F;SPEC.md&quot;&gt;SLP replay format&lt;&#x2F;a&gt;. these replays can be processed programmatically to collect statistics on the occurrence of specific events ingame. &lt;&#x2F;p&gt;
+&lt;p&gt;previously, i had been very curious about whether &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;djanatyn&#x2F;turnip-counter&quot;&gt;my actual replay files matched up to the expected values &lt;&#x2F;a&gt; predicted by the chart above. at the time, &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;hohav&quot;&gt;hohav&lt;&#x2F;a&gt; had already put together a rust crate called &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;github.com&#x2F;hohav&#x2F;peppi&quot;&gt;peppi&lt;&#x2F;a&gt; which could process these replays. it didn&#x27;t take very long to put together a program which would iterate over a directory of replay files, identify any peach item pulls that matched my character, and record them to a simple sqlite database:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;sql&quot; class=&quot;language-sql z-code&quot;&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;z-source z-sql&quot;&gt;&lt;span class=&quot;z-meta z-create z-sql&quot;&gt;&lt;span class=&quot;z-keyword z-other z-create z-sql&quot;&gt;CREATE&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-other z-sql&quot;&gt;TABLE&lt;&#x2F;span&gt; &lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-toc-list z-full-identifier z-sql&quot;&gt;IF NOT EXISTS &lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-toc-list z-full-identifier z-sql&quot;&gt;&lt;span class=&quot;z-entity z-name z-function z-sql&quot;&gt;games&lt;&#x2F;span&gt;&lt;&#x2F;span&gt; (
+    id &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;INTEGER&lt;&#x2F;span&gt; &lt;span class=&quot;z-storage z-modifier z-sql&quot;&gt;PRIMARY KEY&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;,
+    filename &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;TEXT&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;,
+    start_time &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;INTEGER&lt;&#x2F;span&gt;,
+    p1_name &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;TEXT&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;,
+    p1_code &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;TEXT&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;,
+    p2_name &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;TEXT&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;,
+    p2_code &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;TEXT&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;
+);
+
+&lt;span class=&quot;z-meta z-create z-sql&quot;&gt;&lt;span class=&quot;z-keyword z-other z-create z-sql&quot;&gt;CREATE&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-other z-sql&quot;&gt;TABLE&lt;&#x2F;span&gt; &lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-toc-list z-full-identifier z-sql&quot;&gt;IF NOT EXISTS &lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-toc-list z-full-identifier z-sql&quot;&gt;&lt;span class=&quot;z-entity z-name z-function z-sql&quot;&gt;items&lt;&#x2F;span&gt;&lt;&#x2F;span&gt; (
+    id &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;INTEGER&lt;&#x2F;span&gt; &lt;span class=&quot;z-storage z-modifier z-sql&quot;&gt;PRIMARY KEY&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;,
+    game_id &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;INTEGER&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;,
+    item_id &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;INTEGER&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;,
+    frame &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;INTEGER&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;,
+    kind &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;TEXT&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-sql&quot;&gt;NOT&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-language z-sql&quot;&gt;NULL&lt;&#x2F;span&gt;,
+    &lt;span class=&quot;z-storage z-modifier z-sql&quot;&gt;FOREIGN KEY&lt;&#x2F;span&gt; (game_id) &lt;span class=&quot;z-storage z-modifier z-sql&quot;&gt;REFERENCES&lt;&#x2F;span&gt; games (id)
+);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;even with a small sample of 3,505 pulls and 418 games, my results were very close to expectations:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;sql&quot; class=&quot;language-sql z-code&quot;&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;z-source z-sql&quot;&gt;sqlite&lt;span class=&quot;z-keyword z-operator z-comparison z-sql&quot;&gt;&amp;gt;&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-other z-DML z-sql&quot;&gt;SELECT&lt;&#x2F;span&gt; &lt;span class=&quot;z-support z-function z-aggregate z-sql&quot;&gt;COUNT&lt;&#x2F;span&gt;(&lt;span class=&quot;z-variable z-language z-star z-sql&quot;&gt;*&lt;&#x2F;span&gt;) &lt;span class=&quot;z-keyword z-other z-DML z-sql&quot;&gt;FROM&lt;&#x2F;span&gt; items;
+&lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;3505&lt;&#x2F;span&gt;
+sqlite&lt;span class=&quot;z-keyword z-operator z-comparison z-sql&quot;&gt;&amp;gt;&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-other z-DML z-sql&quot;&gt;SELECT&lt;&#x2F;span&gt; &lt;span class=&quot;z-support z-function z-aggregate z-sql&quot;&gt;COUNT&lt;&#x2F;span&gt;(&lt;span class=&quot;z-variable z-language z-star z-sql&quot;&gt;*&lt;&#x2F;span&gt;) &lt;span class=&quot;z-keyword z-other z-DML z-sql&quot;&gt;FROM&lt;&#x2F;span&gt; games;
+&lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;418&lt;&#x2F;span&gt;
+sqlite&lt;span class=&quot;z-keyword z-operator z-comparison z-sql&quot;&gt;&amp;gt;&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-other z-DML z-sql&quot;&gt;SELECT&lt;&#x2F;span&gt; kind, CAST(&lt;span class=&quot;z-support z-function z-aggregate z-sql&quot;&gt;COUNT&lt;&#x2F;span&gt;(&lt;span class=&quot;z-variable z-language z-star z-sql&quot;&gt;*&lt;&#x2F;span&gt;) &lt;span class=&quot;z-keyword z-operator z-assignment z-alias z-sql&quot;&gt;AS&lt;&#x2F;span&gt; &lt;span class=&quot;z-storage z-type z-sql&quot;&gt;REAL&lt;&#x2F;span&gt;) &lt;span class=&quot;z-keyword z-operator z-math z-sql&quot;&gt;&#x2F;&lt;&#x2F;span&gt; (&lt;span class=&quot;z-keyword z-other z-DML z-sql&quot;&gt;SELECT&lt;&#x2F;span&gt; &lt;span class=&quot;z-support z-function z-aggregate z-sql&quot;&gt;COUNT&lt;&#x2F;span&gt;(&lt;span class=&quot;z-variable z-language z-star z-sql&quot;&gt;*&lt;&#x2F;span&gt;) &lt;span class=&quot;z-keyword z-other z-DML z-sql&quot;&gt;FROM&lt;&#x2F;span&gt; items) &lt;span class=&quot;z-keyword z-other z-DML z-sql&quot;&gt;FROM&lt;&#x2F;span&gt; items &lt;span class=&quot;z-keyword z-other z-DML z-sql&quot;&gt;GROUP BY&lt;&#x2F;span&gt; kind;
+Beamsword      &lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0&lt;&#x2F;span&gt;.&lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;00114122681883024&lt;&#x2F;span&gt; &lt;span class=&quot;z-comment z-line z-double-dash z-sql&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-comment z-sql&quot;&gt;--&lt;&#x2F;span&gt; ~0.11% actual vs 0.13% predicted
+&lt;&#x2F;span&gt;Bobomb         &lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0&lt;&#x2F;span&gt;.&lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;00228245363766049&lt;&#x2F;span&gt; &lt;span class=&quot;z-comment z-line z-double-dash z-sql&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-comment z-sql&quot;&gt;--&lt;&#x2F;span&gt; ~0.23% actual vs 0.26% predicted
+&lt;&#x2F;span&gt;DotEyesTurnip  &lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0&lt;&#x2F;span&gt;.&lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0145506419400856&lt;&#x2F;span&gt;  &lt;span class=&quot;z-comment z-line z-double-dash z-sql&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-comment z-sql&quot;&gt;--&lt;&#x2F;span&gt; ~1.46% actual vs 1.71% predicted
+&lt;&#x2F;span&gt;MrSaturn       &lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0&lt;&#x2F;span&gt;.&lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;00485021398002853&lt;&#x2F;span&gt; &lt;span class=&quot;z-comment z-line z-double-dash z-sql&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-comment z-sql&quot;&gt;--&lt;&#x2F;span&gt; ~0.46% actual vs 0.39% predicted
+&lt;&#x2F;span&gt;NormalTurnip   &lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0&lt;&#x2F;span&gt;.&lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;888445078459344&lt;&#x2F;span&gt;   &lt;span class=&quot;z-comment z-line z-double-dash z-sql&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-comment z-sql&quot;&gt;--&lt;&#x2F;span&gt; ~88.84% actual vs 88.95% predicted (59.873 + 10.264 + 8.553 + 5.132 + 5.132)
+&lt;&#x2F;span&gt;StitchTurnip   &lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0&lt;&#x2F;span&gt;.&lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0182596291012839&lt;&#x2F;span&gt;  &lt;span class=&quot;z-comment z-line z-double-dash z-sql&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-comment z-sql&quot;&gt;--&lt;&#x2F;span&gt; ~1.82% actual vs 1.71% predicted
+&lt;&#x2F;span&gt;WinkyTurnip    &lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0&lt;&#x2F;span&gt;.&lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0704707560627675&lt;&#x2F;span&gt;  &lt;span class=&quot;z-comment z-line z-double-dash z-sql&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-comment z-sql&quot;&gt;--&lt;&#x2F;span&gt; ~7.04% actual vs 6.84% predicted
+&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;but i was still curious. i had a chart of frequencies to expect, and i saw that my actual games were close to these expectations, but i still didn&#x27;t understand how the game logic determined which item comes out of the ground.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;a-reddit-post-on-melee-rng&quot;&gt;a reddit post on melee rng&lt;a class=&quot;zola-anchor&quot; href=&quot;#a-reddit-post-on-melee-rng&quot; aria-label=&quot;Anchor link for: a-reddit-post-on-melee-rng&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;at some point, i encountered &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;www.reddit.com&#x2F;r&#x2F;SSBM&#x2F;comments&#x2F;71gn1d&#x2F;the_basics_of_rng_in_melee&#x2F;&quot;&gt;a reddit post from september 2017 by twotwelvedegrees&lt;&#x2F;a&gt;, titled &amp;quot;The Basics of RNG in Melee&amp;quot;. not only did this post explain the basics of melee&#x27;s &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Linear_congruential_generator&quot;&gt;linear congruential generator&lt;&#x2F;a&gt; implementation, it also broke down the particular RNG calls which were executed for peach&#x27;s item pulls:&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;All random events in the game are controlled by the output of two functions: get_random_int(max_val) and get_random_float()...On any turnip pull Peach starts with a call to get_random_int(128) which proceeds as follows: &lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Value&lt;&#x2F;th&gt;&lt;th&gt;Result&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;0&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls an item&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;1-127&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a turnip&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;blockquote&gt;
+&lt;p&gt;On pulling an item, there is then a call to get_random_int(6) which proceeds as follows:&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Value&lt;&#x2F;th&gt;&lt;th&gt;Result&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;0-1&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a bomb&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;2-4&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a Mr. Saturn&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;5&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a beam sword&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;blockquote&gt;
+&lt;p&gt;On pulling a turnip, there is then a call to get_random_int(58) which proceeds as follows:&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Value&lt;&#x2F;th&gt;&lt;th&gt;Result&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;0-34&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a regular turnip&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;35-40&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls an unamused turnip&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;41-45&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a line eyes turnip&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;46-48&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a circle eyes turnip&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;49-51&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a super happy turnip&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;52-55&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a winky turnip&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;56&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a dot eyes&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;57&lt;&#x2F;td&gt;&lt;td&gt;Peach pulls a stitch&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;this was eye-opening for me. if i could analyze the code that was running while peach pulled an item, i could see (and provide a citation for) the conditional branches that were executed. i would no longer need to trust the chart - i could derive this information on my own. i was excited! and thankfully, much of the hard work had already been done for me.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;the-ssbm-datasheet&quot;&gt;the ssbm datasheet&lt;a class=&quot;zola-anchor&quot; href=&quot;#the-ssbm-datasheet&quot; aria-label=&quot;Anchor link for: the-ssbm-datasheet&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;in the very first paragraph, twotwelvedegrees mentions a spreadsheet:&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Major props to u&#x2F;dansalvato and this spreadsheet since it basically did the research for me.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;this is the &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;docs.google.com&#x2F;spreadsheets&#x2F;d&#x2F;1JX2w-r2fuvWuNgGb6D3Cs4wHQKLFegZe2jhbBuIhCG8&#x2F;preview#gid=19&quot;&gt;SSBM Data Sheet (1.02)&lt;&#x2F;a&gt;. it contains function addresses for many of the subroutines the game engine executes during normal gameplay. this document represents an extraordinary amount of effort reverse-engineering the game, made available for any curious hackers like myself.&lt;&#x2F;p&gt;
+&lt;p&gt;one of the sections under the &amp;quot;Function Addresses&amp;quot; tab is labeled &amp;quot;Random Number Generator&amp;quot;. the &lt;code&gt;get_random_int&lt;&#x2F;code&gt; function mentioned in the reddit post is described in some detail here:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;there is a main RNG function at &lt;code&gt;0x80380580&lt;&#x2F;code&gt;,&lt;&#x2F;li&gt;
+&lt;li&gt;it&#x27;s input is &lt;code&gt;r3&lt;&#x2F;code&gt;, which is the number of possible numbers to generate for the call,&lt;&#x2F;li&gt;
+&lt;li&gt;it&#x27;s output is &lt;code&gt;r3&lt;&#x2F;code&gt;, which is the random number returned&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;if this is accurate, it means that every time peach attempts to pulls an item, we expect there&#x27;s a call to &lt;code&gt;get_random_int(128)&lt;&#x2F;code&gt; at &lt;code&gt;0x80380580&lt;&#x2F;code&gt;. we should be able to load up our copy of melee, start the game, identify the function, and set some breakpoints to see it in action!&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;enabling-dolphin-s-debugger&quot;&gt;enabling dolphin&#x27;s debugger&lt;a class=&quot;zola-anchor&quot; href=&quot;#enabling-dolphin-s-debugger&quot; aria-label=&quot;Anchor link for: enabling-dolphin-s-debugger&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;i&#x27;m on nixos, so to load dolphin, i pull down a version from nixpkgs:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;sh&quot; class=&quot;language-sh z-code&quot;&gt;&lt;code class=&quot;language-sh&quot; data-lang=&quot;sh&quot;&gt;&lt;span class=&quot;z-source z-shell z-bash&quot;&gt;&lt;span class=&quot;z-meta z-function-call z-shell&quot;&gt;&lt;span class=&quot;z-variable z-function z-shell&quot;&gt;nix&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-arguments z-shell&quot;&gt; build nixpkgs#dolphin-emu&lt;span class=&quot;z-variable z-parameter z-option z-shell&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-parameter z-shell&quot;&gt; -&lt;&#x2F;span&gt;o&lt;&#x2F;span&gt; dolphin-hacking&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-logical z-continue z-shell&quot;&gt;;&lt;&#x2F;span&gt; &lt;span class=&quot;z-meta z-function-call z-shell&quot;&gt;&lt;span class=&quot;z-support z-function z-colon z-shell&quot;&gt;:&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-arguments z-shell&quot;&gt; get dolphin package&lt;&#x2F;span&gt;
+&lt;span class=&quot;z-meta z-function-call z-shell&quot;&gt;&lt;span class=&quot;z-variable z-function z-shell&quot;&gt;.&#x2F;dolphin-hacking&#x2F;bin&#x2F;dolphin-emu&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;                &lt;span class=&quot;z-keyword z-operator z-logical z-continue z-shell&quot;&gt;;&lt;&#x2F;span&gt; &lt;span class=&quot;z-meta z-function-call z-shell&quot;&gt;&lt;span class=&quot;z-support z-function z-colon z-shell&quot;&gt;:&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-arguments z-shell&quot;&gt; execute dolphin&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;you&#x27;re on your own for acquiring a copy of melee&#x27;s disk image.&lt;&#x2F;p&gt;
+&lt;p&gt;on my copy of dolphin, the debugging interface wasn&#x27;t visible by default, so i had to enable it:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;enable_debugging_ui.png&quot;  alt=&quot;screenshot of &amp;#x27;Enable Debugging UI&amp;#x27; checkbox&quot;&gt;
+    
+    &lt;figcaption&gt;Options &amp;gt; Configuration &amp;gt; Interface&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;i also toggled the &#x27;Code&#x27;, &#x27;Registers&#x27;, and &#x27;Memory&#x27; pane into view:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;dolphin-view-settings.png&quot;  alt=&quot;enabling &amp;#x27;Code&amp;#x27;, &amp;#x27;Registers&amp;#x27;, and &amp;#x27;Memory&amp;#x27; view&quot;&gt;
+    
+    &lt;figcaption&gt;View Toggles&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;i also moved some panes around:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;dolphin-ui.png&quot;  alt=&quot;screenshot of dolphin debugger ui&quot;&gt;
+    
+    &lt;figcaption&gt;ready for action&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;i&#x27;ve got an adapter for my gamecube controller setup, and i have a few gecko codes enabled which change the default behavior of the game to make investigation a little easier:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Unlock All Characters and Stages&lt;&#x2F;li&gt;
+&lt;li&gt;VS 1 player (set time to none)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;the game loads as expected, and we&#x27;re at the character select screen:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;dolphin-debugger-game-running.png&quot;  alt=&quot;screenshot of melee running with debug pane to the side&quot;&gt;
+    
+    &lt;figcaption&gt;debugging activated&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;you might notice that all instructions are marked as &lt;code&gt;&amp;lt;unknown&amp;gt;&lt;&#x2F;code&gt; while the game is running. if we hit the pause button, we can see the instructions:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;dolphin-unpaused.png&quot;  alt=&quot;screenshot of instructions in debug pane&quot;&gt;
+    
+    &lt;figcaption&gt;instructions are now visible&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;cool! we can see the address of each instruction, it&#x27;s parameters, and there&#x27;s even a callstack showing how we got here.&lt;&#x2F;p&gt;
+&lt;p&gt;we already know where &lt;code&gt;get_random_int&lt;&#x2F;code&gt; is, so let&#x27;s try searching for it.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;finding-get-random-int&quot;&gt;finding get_random_int&lt;a class=&quot;zola-anchor&quot; href=&quot;#finding-get-random-int&quot; aria-label=&quot;Anchor link for: finding-get-random-int&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;there&#x27;s a &amp;quot;Search Address&amp;quot; text input available. typing in &lt;code&gt;0x80380580&lt;&#x2F;code&gt; and hitting enter will highlight the line for that address. we can right-click this line, select &amp;quot;Add Function&amp;quot; from the context menu, and we&#x27;ll see a set of instructions highlighted:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;add_function.png&quot;  alt=&quot;instructions for get_random_int&quot;&gt;
+    
+    &lt;figcaption&gt;get_random_int assembly instructions&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;the name &lt;code&gt;zz_80380580_&lt;&#x2F;code&gt; is not very helpful. we can change that by right-clicking the same line, selecting &amp;quot;Rename symbol&amp;quot; from the context menu, and giving this symbol a better name, &lt;code&gt;get_random_int&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;we can even select &amp;quot;Copy function&amp;quot; in the context menu to get a listing for all of the instructions:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;z-code&quot;&gt;&lt;code&gt;&lt;span class=&quot;z-text z-plain&quot;&gt;get_random_int
+80380580: lwz	r5, -0x570C (r13)
+80380584: lis	r4, 0x0003
+80380588: addi	r0, r4, 17405
+8038058c: lwz	r4, 0 (r5)
+80380590: mullw	r4, r4, r0
+80380594: addis	r4, r4, 39
+80380598: subi	r0, r4, 24893
+8038059c: stw	r0, 0 (r5)
+803805a0: lwz	r4, -0x570C (r13)
+803805a4: lwz	r0, 0 (r4)
+803805a8: rlwinm	r0, r0, 16, 16, 31 (ffff0000)
+803805ac: mullw	r0, r3, r0
+803805b0: srawi	r3, r0,16
+803805b4: addze	r3, r3
+803805b8: blr	
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;understanding what all of these instructions is outside the scope of this post. instead, let&#x27;s ask dolphin to log every time this function is executed by adding a breakpoint!&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;logging-get-random-int-calls&quot;&gt;logging get_random_int calls&lt;a class=&quot;zola-anchor&quot; href=&quot;#logging-get-random-int-calls&quot; aria-label=&quot;Anchor link for: logging-get-random-int-calls&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;first, let&#x27;s enable the breakpoint view (i forgot to turn it on earlier):&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;dolphin-view-breakpoints.png&quot;  alt=&quot;enabling breakpoints&quot;&gt;
+    
+    &lt;figcaption&gt;oops we need those&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;navigate to the breakpoint tab, click &amp;quot;New&amp;quot;, and let&#x27;s observe these calls as they execute:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;log-breakpoint.png&quot;  alt=&quot;breakpoint configuration&quot;&gt;
+    
+    &lt;figcaption&gt;breakpoint configuration&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;ul&gt;
+&lt;li&gt;activate this breakpoint at &lt;code&gt;0x80380580&lt;&#x2F;code&gt; (our suspected &lt;code&gt;get_random_int&lt;&#x2F;code&gt; function),&lt;&#x2F;li&gt;
+&lt;li&gt;our condition &lt;code&gt;r3, 1&lt;&#x2F;code&gt; means to display the register &lt;code&gt;r3&lt;&#x2F;code&gt; in the log (which should be the range on numbers generated),&lt;&#x2F;li&gt;
+&lt;li&gt;don&#x27;t stop execution of the game, just log it&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;it should look like this (it even includes our renamed symbol from earlier):&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;breakpoint-success.png&quot;  alt=&quot;configured breakpoint&quot;&gt;
+    
+    &lt;figcaption&gt;configured breakpoint enabled&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;in melee, attempting to place the character select token when it isn&#x27;t hovering over a particular character will select a random character - the random button is a modern innovation.&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;random-characters.gif&quot;  alt=&quot;randomly selecting characters&quot;&gt;
+    
+    &lt;figcaption&gt;og random button&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;that random choice has to come from somewhere. in the log, we can actually see some &lt;code&gt;get_random_int&lt;&#x2F;code&gt; calls happening already:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;z-code&quot;&gt;&lt;code&gt;&lt;span class=&quot;z-text z-plain&quot;&gt;Breakpoint condition returned: 1. Vars:  r3=25
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;Vars: r3=25&lt;&#x2F;code&gt; sounds about right - there are 25 characters in the game!&lt;&#x2F;p&gt;
+&lt;blockquote class=&quot;callout alert&quot;&gt;
+    
+    &lt;div class=&quot;icon&quot;&gt;
+        &lt;svg xmlns=&quot;http:&#x2F;&#x2F;www.w3.org&#x2F;2000&#x2F;svg&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;20&quot; height=&quot;20&quot;&gt;&lt;path d=&quot;M4.00098 20V14C4.00098 9.58172 7.5827 6 12.001 6C16.4193 6 20.001 9.58172 20.001 14V20H21.001V22H3.00098V20H4.00098ZM6.00098 20H18.001V14C18.001 10.6863 15.3147 8 12.001 8C8.68727 8 6.00098 10.6863 6.00098 14V20ZM11.001 2H13.001V5H11.001V2ZM19.7792 4.80761L21.1934 6.22183L19.0721 8.34315L17.6578 6.92893L19.7792 4.80761ZM2.80859 6.22183L4.22281 4.80761L6.34413 6.92893L4.92991 8.34315L2.80859 6.22183ZM7.00098 14C7.00098 11.2386 9.23956 9 12.001 9V11C10.3441 11 9.00098 12.3431 9.00098 14H7.00098Z&quot; fill=&quot;currentColor&quot;&gt;&lt;&#x2F;path&gt;&lt;&#x2F;svg&gt;
+    &lt;&#x2F;div&gt;
+    &lt;div class=&quot;content&quot;&gt;
+        
+        &lt;p&gt;if you don&#x27;t see any logs for breakpoints, check your logging configuration (&amp;quot;View&amp;quot; &amp;gt; &amp;quot;Show Logging Configuration&amp;quot;) and try enabling all log types.&lt;&#x2F;p&gt;
+
+    &lt;&#x2F;div&gt;
+&lt;&#x2F;blockquote&gt;&lt;h1 id=&quot;identifying-where-peach-rng-calls-happen&quot;&gt;identifying where peach rng calls happen&lt;a class=&quot;zola-anchor&quot; href=&quot;#identifying-where-peach-rng-calls-happen&quot; aria-label=&quot;Anchor link for: identifying-where-peach-rng-calls-happen&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;let&#x27;s get ingame and try pulling a turnip! hit down-b, hit start to pause the game, and let&#x27;s see what happened.&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;pull-turnip.png&quot;  alt=&quot;screenshot of daisy pulling turnip&quot;&gt;
+    
+    &lt;figcaption&gt;daisy is the best peach costume&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;&lt;pre class=&quot;z-code&quot;&gt;&lt;code&gt;&lt;span class=&quot;z-text z-plain&quot;&gt;...
+Breakpoint condition returned: 1. Vars:  r3=128
+Breakpoint condition returned: 1. Vars:  r3=58
+...
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;nice: &lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;get_random_int(128)&lt;&#x2F;code&gt; is determining whether we pull an item or a turnip, and&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;get_random_int(58)&lt;&#x2F;code&gt; is determining the face of the turnip&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;we&#x27;re not logging the return value of the RNG call right now, but we&#x27;ve identified the &lt;code&gt;get_random_int&lt;&#x2F;code&gt; calls that are being executed when peach pulls an item. that&#x27;s great progress!&lt;&#x2F;p&gt;
+&lt;p&gt;what code is calling &lt;code&gt;get_random_int(128)&lt;&#x2F;code&gt;? let&#x27;s modify our breakpoint with a different condition, and set it to break (not just log):&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;modify-condition.png&quot;  alt=&quot;new breakpoint condition&quot;&gt;
+    
+    &lt;figcaption&gt;check for a specific argument&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;after pulling another turnip, the game should pause, stopping at &lt;code&gt;get_random_int&lt;&#x2F;code&gt;. interestingly, even though peach may have entered the item pull animation, the animation does not show which item peach has pulled, since it hasn&#x27;t decided yet. let&#x27;s check out our callstack:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;link-register.png&quot;  alt=&quot;callstack screenshot&quot;&gt;
+    
+    &lt;figcaption&gt;the path that led us here&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;&lt;code&gt;LR&lt;&#x2F;code&gt; represents the &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;en.wikipedia.org&#x2F;wiki&#x2F;Link_register&quot;&gt;&amp;quot;link register&amp;quot;&lt;&#x2F;a&gt;. whenever we call a subroutine with the &lt;code&gt;bl&lt;&#x2F;code&gt; instruction, we populate a special register with the address to return the program counter to once our subroutine finishes executing (usually with a &lt;code&gt;blr&lt;&#x2F;code&gt; instruction). if we click on the &lt;code&gt;LR = 8011d088&lt;&#x2F;code&gt; address, we can get some context on what&#x27;s happening before this RNG call is executed, and what we do with the result.&lt;&#x2F;p&gt;
+&lt;p&gt;this instruction is happening in the middle of the subroutine, so i scrolled up the previous &lt;code&gt;blr&lt;&#x2F;code&gt; instruction (denoting the end of the last subroutine), moved onto the next instruction (&lt;code&gt;0x8011d018&lt;&#x2F;code&gt;), and defined a new function as we did previously. i named it &lt;code&gt;turnip_rng_caller&lt;&#x2F;code&gt; - it may be used for other interactions, but we&#x27;re fairly confident it&#x27;s part of peach&#x27;s item pull logic.&lt;&#x2F;p&gt;
+&lt;blockquote class=&quot;callout tip&quot;&gt;
+    
+    &lt;div class=&quot;icon&quot;&gt;
+        &lt;svg xmlns=&quot;http:&#x2F;&#x2F;www.w3.org&#x2F;2000&#x2F;svg&quot; viewBox=&quot;0 0 24 24&quot; width=&quot;20&quot; height=&quot;20&quot;&gt;&lt;path d=&quot;M9.97308 18H11V13H13V18H14.0269C14.1589 16.7984 14.7721 15.8065 15.7676 14.7226C15.8797 14.6006 16.5988 13.8564 16.6841 13.7501C17.5318 12.6931 18 11.385 18 10C18 6.68629 15.3137 4 12 4C8.68629 4 6 6.68629 6 10C6 11.3843 6.46774 12.6917 7.31462 13.7484C7.40004 13.855 8.12081 14.6012 8.23154 14.7218C9.22766 15.8064 9.84103 16.7984 9.97308 18ZM10 20V21H14V20H10ZM5.75395 14.9992C4.65645 13.6297 4 11.8915 4 10C4 5.58172 7.58172 2 12 2C16.4183 2 20 5.58172 20 10C20 11.8925 19.3428 13.6315 18.2443 15.0014C17.624 15.7748 16 17 16 18.5V21C16 22.1046 15.1046 23 14 23H10C8.89543 23 8 22.1046 8 21V18.5C8 17 6.37458 15.7736 5.75395 14.9992Z&quot; fill=&quot;currentColor&quot;&gt;&lt;&#x2F;path&gt;&lt;&#x2F;svg&gt;
+    &lt;&#x2F;div&gt;
+    &lt;div class=&quot;content&quot;&gt;
+        
+        &lt;p&gt;the address &lt;code&gt;0x8011d018&lt;&#x2F;code&gt; is included in the &lt;a rel=&quot;nofollow noreferrer&quot; href=&quot;https:&#x2F;&#x2F;smashboards.com&#x2F;threads&#x2F;smashboards-community-symbol-map.426763&#x2F;&quot;&gt;smashboards community symbol map&lt;&#x2F;a&gt;, given the name &lt;code&gt;_$_wP_Peach_DownB_GenTurnip&lt;&#x2F;code&gt; - looks like we&#x27;re on the right track.&lt;&#x2F;p&gt;
+
+    &lt;&#x2F;div&gt;
+&lt;&#x2F;blockquote&gt;&lt;h1 id=&quot;peach-downb-genturnip-logic&quot;&gt;Peach_DownB_GenTurnip logic&lt;a class=&quot;zola-anchor&quot; href=&quot;#peach-downb-genturnip-logic&quot; aria-label=&quot;Anchor link for: peach-downb-genturnip-logic&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;let&#x27;s take a closer look at the logic around &lt;code&gt;0x8011d088&lt;&#x2F;code&gt; in the body of the function:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;z-code&quot;&gt;&lt;code&gt;&lt;span class=&quot;z-text z-plain&quot;&gt;...
+8011d088: bl	-&amp;gt;0x80380580
+8011d08c: cmpwi	r3, 0
+8011d090: bne-	 -&amp;gt;0x8011D0A0
+8011d094: mr	r3, r29
+8011d098: bl	-&amp;gt;0x8011CE48
+8011d09c: mr	r31, r3
+8011d0a0: lwz	r4, 0x010C (r30)
+8011d0a4: mr	r6, r31
+8011d0a8: lfs	f1, 0x002C (r30)
+8011d0ac: mr	r3, r29
+8011d0b0: lwz	r4, 0x0008 (r4)
+8011d0b4: lbz	r5, 0x0010 (r4)
+8011d0b8: addi	r4, sp, 52
+8011d0bc: bl	-&amp;gt;0x802BD4AC
+...
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;there&#x27;s a few things happening here:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;we call &lt;code&gt;get_random_int(128)&lt;&#x2F;code&gt; (denoted by address &lt;code&gt;0x80380580&lt;&#x2F;code&gt;, with &lt;code&gt;r3&lt;&#x2F;code&gt; set to &lt;code&gt;128&lt;&#x2F;code&gt;),&lt;&#x2F;li&gt;
+&lt;li&gt;when we return to the subroutine, &lt;code&gt;r3&lt;&#x2F;code&gt; is populated with the random return value&lt;&#x2F;li&gt;
+&lt;li&gt;we check &lt;code&gt;r3&lt;&#x2F;code&gt; with the &lt;code&gt;cmpwi&lt;&#x2F;code&gt; instruction to see if the return value is 0,&lt;&#x2F;li&gt;
+&lt;li&gt;if &lt;em&gt;the return value is not 0&lt;&#x2F;em&gt;, we branch to &lt;code&gt;0x8011d0a0&lt;&#x2F;code&gt; using the &lt;code&gt;bne&lt;&#x2F;code&gt; instruction&lt;&#x2F;li&gt;
+&lt;li&gt;if &lt;em&gt;the return value is 0&lt;&#x2F;em&gt;, we continue execution.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;this maps directly to the explanation we saw in &amp;quot;The Basics of RNG in Melee&amp;quot; previously, but this time we&#x27;re doing it live.&lt;&#x2F;p&gt;
+&lt;p&gt;we can try stepping through the &lt;code&gt;get_random_int&lt;&#x2F;code&gt; call until we get to the return &lt;code&gt;blr&lt;&#x2F;code&gt; instruction at &lt;code&gt;0x803805b8&lt;&#x2F;code&gt;. if we check the value of the &lt;code&gt;r3&lt;&#x2F;code&gt; register, we can see the random result returned:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;r3-return.png&quot;  alt=&quot;r3 is returning 0x20&quot;&gt;
+    
+    &lt;figcaption&gt;0x20 == 32&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;&lt;code&gt;32 != 0&lt;&#x2F;code&gt;, so this is going to be a turnip. but now that we know how this logic works...what if we got a little mischevious?&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;giving-peach-a-buff&quot;&gt;giving peach a buff&lt;a class=&quot;zola-anchor&quot; href=&quot;#giving-peach-a-buff&quot; aria-label=&quot;Anchor link for: giving-peach-a-buff&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;navigate to the &lt;code&gt;cmpwi&lt;&#x2F;code&gt; instruction at &lt;code&gt;0x8011d08c&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;cmpwi.png&quot;  alt=&quot;cmpwi instruction&quot;&gt;
+    
+    &lt;figcaption&gt;our fate is in our own hands&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;let&#x27;s create a new breakpoint:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;cmpwi-conditions.png&quot;  alt=&quot;cmpwi breakpoint conditions&quot;&gt;
+    
+    &lt;figcaption&gt;this is not tournament legal&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;instead of using the returned value from the &lt;code&gt;get_random_int(128)&lt;&#x2F;code&gt; call, we&#x27;re just going to set register &lt;code&gt;r3&lt;&#x2F;code&gt; to 0 when evaluating this instruction.&lt;&#x2F;p&gt;
+&lt;p&gt;let&#x27;s disable our previous breakpoint for now so we can test this out:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;disable-old-breakpoint.png&quot;  alt=&quot;disabling get_random_int breakpoint&quot;&gt;
+    
+    &lt;figcaption&gt;otherwise, our game stops on every item pull&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;hit start, and let&#x27;s get pulling!&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;buffed-peach.gif&quot;  alt=&quot;peach is only throwing items&quot;&gt;
+    
+    &lt;figcaption&gt;the dream&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;&lt;h1 id=&quot;final-destination-no-items-beamswords-only&quot;&gt;final destination, no items, beamswords only&lt;a class=&quot;zola-anchor&quot; href=&quot;#final-destination-no-items-beamswords-only&quot; aria-label=&quot;Anchor link for: final-destination-no-items-beamswords-only&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;i&#x27;m quite fond of beamswords, so let&#x27;s see if we can make them a little more popular. if we refer to our charts from earlier, we expect that there will be a &lt;code&gt;get_random_int(6)&lt;&#x2F;code&gt; call. we can modify our &lt;code&gt;get_random_int&lt;&#x2F;code&gt; breakpoint condition accordingly:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;breakpoint-modify.png&quot;  alt=&quot;r3 == 6&quot;&gt;
+    
+    &lt;figcaption&gt;r3 == 6&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;if you&#x27;ve followed along this far, hopefully you&#x27;re getting the hang of the dolphin debugger. hit the &lt;code&gt;LR == 8011cf0c&lt;&#x2F;code&gt; address in the callstack, a familiar &lt;code&gt;bl -&amp;gt;0x80380580&lt;&#x2F;code&gt; instruction. let&#x27;s navigate to the &lt;em&gt;next instruction&lt;&#x2F;em&gt; (&lt;code&gt;0x8011cf10&lt;&#x2F;code&gt;) and create a new breakpoint, setting &lt;code&gt;r3 = 5&lt;&#x2F;code&gt; and continuing execution:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;mr-saturn-breakpoint.png&quot;  alt=&quot;r3 = 5&quot;&gt;
+    
+    &lt;figcaption&gt;r3 = 5&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;once again, let&#x27;s disable our &lt;code&gt;get_rand_int&lt;&#x2F;code&gt; item RNG call:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;disable-item-rng.png&quot;  alt=&quot;disabling item rng breakpoint&quot;&gt;
+    
+    &lt;figcaption&gt;we&amp;#x27;re almost there&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;
+&lt;p&gt;and finally:&lt;&#x2F;p&gt;
+&lt;figure&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;sword-peach.gif&quot;  alt=&quot;peach only pulls beamswords now&quot;&gt;
+    
+    &lt;figcaption&gt;watch out marth&lt;&#x2F;figcaption&gt;
+    
+&lt;&#x2F;figure&gt;&lt;h1 id=&quot;closing-thoughts&quot;&gt;closing thoughts&lt;a class=&quot;zola-anchor&quot; href=&quot;#closing-thoughts&quot; aria-label=&quot;Anchor link for: closing-thoughts&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
+&lt;p&gt;nothing here is novel - my goal is only to share the fun things i&#x27;ve been learning about recently. 
+i spend much of my time working towards understanding through experimentation, and i&#x27;m hoping this blog can serve as a lab notebook.&lt;&#x2F;p&gt;
+&lt;p&gt;if you have any questions, comments, or corrections, feel free to send me an email at &lt;a href=&quot;mailto:djanatyn@gmail.com&quot;&gt;djanatyn@gmail.com&lt;&#x2F;a&gt;. thanks for taking the time to read, take care!&lt;&#x2F;p&gt;
+</content>
+	</entry>
+</feed>
