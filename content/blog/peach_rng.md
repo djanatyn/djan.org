@@ -185,7 +185,7 @@ get_random_int
 803805b8: blr	
 ```
 
-understanding what all of these instructions is outside the scope of this post. instead, let's ask dolphin to log every time this function is executed by adding a breakpoint!
+understanding what all of these instructions do is outside the scope of this post. instead, let's ask dolphin to log every time this function is executed by adding a breakpoint!
 
 # logging get_random_int calls
 
