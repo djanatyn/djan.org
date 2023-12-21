@@ -119,7 +119,7 @@ Beamsword      &lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0&lt;&#x
 &lt;p&gt;you&#x27;re on your own for acquiring a copy of melee&#x27;s disk image.&lt;&#x2F;p&gt;
 &lt;p&gt;on my copy of dolphin, the debugging interface wasn&#x27;t visible by default, so i had to enable it:&lt;&#x2F;p&gt;
 &lt;figure&gt;
-    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;enable_debugging_ui.png&quot;  alt=&quot;screenshot of &amp;#x27;Enable Debugging UI&amp;#x27; checkbox&quot;&gt;
+    &lt;img src=&quot;&amp;#x2F;img&amp;#x2F;enable-debugging-ui.png&quot;  alt=&quot;screenshot of &amp;#x27;Enable Debugging UI&amp;#x27; checkbox&quot;&gt;
     
     &lt;figcaption&gt;Options &amp;gt; Configuration &amp;gt; Interface&lt;&#x2F;figcaption&gt;
     
@@ -186,7 +186,7 @@ Beamsword      &lt;span class=&quot;z-constant z-numeric z-sql&quot;&gt;0&lt;&#x
 803805b4: addze	r3, r3
 803805b8: blr	
 &lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
-&lt;p&gt;understanding what all of these instructions is outside the scope of this post. instead, let&#x27;s ask dolphin to log every time this function is executed by adding a breakpoint!&lt;&#x2F;p&gt;
+&lt;p&gt;understanding what all of these instructions do is outside the scope of this post. instead, let&#x27;s ask dolphin to log every time this function is executed by adding a breakpoint!&lt;&#x2F;p&gt;
 &lt;h1 id=&quot;logging-get-random-int-calls&quot;&gt;logging get_random_int calls&lt;a class=&quot;zola-anchor&quot; href=&quot;#logging-get-random-int-calls&quot; aria-label=&quot;Anchor link for: logging-get-random-int-calls&quot;&gt;#&lt;&#x2F;a&gt;&lt;&#x2F;h1&gt;
 &lt;p&gt;first, let&#x27;s enable the breakpoint view (i forgot to turn it on earlier):&lt;&#x2F;p&gt;
 &lt;figure&gt;
