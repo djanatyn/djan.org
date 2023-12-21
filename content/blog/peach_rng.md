@@ -129,7 +129,7 @@ you're on your own for acquiring a copy of melee's disk image.
 
 on my copy of dolphin, the debugging interface wasn't visible by default, so i had to enable it:
 
-{{ figure(src="/img/enable_debugging_ui.png", alt="screenshot of 'Enable Debugging UI' checkbox", caption="Options > Configuration > Interface") }}
+{{ figure(src="/img/enable-debugging-ui.png", alt="screenshot of 'Enable Debugging UI' checkbox", caption="Options > Configuration > Interface") }}
 
 i also toggled the 'Code', 'Registers', and 'Memory' pane into view:
 
