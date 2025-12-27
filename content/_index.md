@@ -28,3 +28,5 @@ into reverse-engineering, observability, tracing, recreational programming, and 
 - [recurse center](https://recurse.com) alumni
 
 {{ figure(src="/img/domino-square.jpg", alt="a picture of my cat domino", caption="my cat domino", width="200", height="200") }}
+
+<script src="https://recentfm.rknight.me/now.js?u=djanatyn"></script>
