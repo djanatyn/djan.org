@@ -5,6 +5,11 @@ draft = false
 
 [taxonomies]
 categories = ["lab notebook"]
+
+[extra]
+toc = false
+copy = true
+comment = false
 +++
 
 # peach pulls mystery items
@@ -215,7 +220,7 @@ Breakpoint condition returned: 1. Vars:  r3=25
 ```
 `Vars: r3=25` sounds about right - there are 25 characters in the game!
 
-{% alert() %}
+{% caution() %}
 if you don't see any logs for breakpoints, check your logging configuration ("View" > "Show Logging Configuration") and try enabling all log types.
 {% end %}
 
@@ -317,6 +322,9 @@ i'm quite fond of beamswords, so let's see if we can make them a little more pop
 
 {{ figure(src="/img/breakpoint-modify.png", alt="r3 == 6", caption="r3 == 6") }}
 
+TODO: remind the player to pull an item first
+TODO: describe branch prediction
+ 
 if you've followed along this far, hopefully you're getting the hang of the dolphin debugger. hit the `LR == 8011cf0c` address in the callstack, a familiar `bl ->0x80380580` instruction. let's navigate to the *next instruction* (`0x8011cf10`) and create a new breakpoint, setting `r3 = 5` and continuing execution:
 
 {{ figure(src="/img/mr-saturn-breakpoint.png", alt="r3 = 5", caption="r3 = 5") }}
