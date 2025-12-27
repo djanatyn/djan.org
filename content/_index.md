@@ -27,4 +27,4 @@ into reverse-engineering, observability, tracing, recreational programming, and 
 - [nixpkgs](https://repology.org/maintainer/djanatyn@gmail.com) maintainer 
 - [recurse center](https://recurse.com) alumni
 
-{{ figure(src="/img/domino-square.jpg", alt="alt text", caption="caption text", width="600", height="400") }}
+{{ figure(src="/img/domino-square.jpg", alt="a picture of my cat domino", caption="my cat domino", width="200", height="200") }}
