@@ -30,5 +30,5 @@ into reverse-engineering, observability, tracing, recreational programming, and 
 {{ figure(src="/img/domino-square.jpg", alt="a picture of my cat domino", caption="my cat domino", width="200", height="200") }}
 
 <!-- <script src="https://recentfm.rknight.me/now.js?u=djanatyn"></script> -->
-<script src="lastfm.js" type="module"></script>
+<script src="js/lastfm.js" type="module"></script>
 <lastfm-tracks user="djanatyn" apikey="bdbfa7198e8adf925ddcde01f81b744a" interval="60"></lastfm-tracks>
