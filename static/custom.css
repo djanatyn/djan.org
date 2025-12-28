@@ -25,11 +25,31 @@
   #sidebar {
     position: static;
     order: 2;
+    width: 100%;
     max-width: 400px;
     margin: 2em auto;
   }
 
+  #sidebar lastfm-tracks {
+    width: 100%;
+    max-width: 400px;
+    height: 600px;
+    min-height: 600px;
+    margin: 0 auto;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
   main {
     order: 1;
+  }
+}
+
+/* Debug helper - remove after testing */
+@media (max-width: 900px) {
+  #sidebar {
+    border: 2px solid red;
+    background: rgba(255, 0, 0, 0.1);
   }
 }
