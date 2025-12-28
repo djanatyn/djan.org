@@ -1,7 +1,8 @@
-#wrapper.with-sidebar {
+.sidebar-layout {
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 2em;
+  width: 100%;
 }
 
 #sidebar {
@@ -17,7 +18,7 @@
 }
 
 @media (max-width: 900px) {
-  #wrapper.with-sidebar {
+  .sidebar-layout {
     grid-template-columns: 1fr;
   }
 
