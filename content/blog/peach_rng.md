@@ -8,7 +8,7 @@ categories = ["lab notebook"]
 
 [extra]
 toc = false
-copy = true
+code_copy = true
 comment = false
 +++
 
@@ -16,13 +16,13 @@ comment = false
 
 as a melee peach player, i spend a lot of my time pulling random items out of the ground.
 
-{{ figure(src="/img/peach-turnip-pull.gif", alt="gif of peach pulling a turnip", caption="image from ssbwiki") }}
+{{ <figure src="/img/peach-turnip-pull.gif" alt="gif of peach pulling a turnip" caption="image from ssbwiki" /> }}
 
 princess peach has a special move called ["Vegetable"](https://www.ssbwiki.com/Vegetable), activated by pressing down-special while grounded. if peach is able to complete her pull animation successfully, she retrieves an item from the ground - either a turnip, a bobomb, a beamsword, or a mr saturn (with turnips being the most common). it's a defining move for her character, and for many players is the default option to consider when in a safe position. although she loses access to a few options while holding a turnip (most notably grab), the possibility of throwing it at an opponent demands respect. it can open up new approaches, enable otherwise impossible combo routes, and empowers her to interact with her opponent from a distance.
 
 over the 20+ year history of the game, the community has created resources to help players understand how often to expect particular outcomes. this image is what i see referenced most often:
 
-{{ figure(src="/img/expected-frequency-chart.png", alt="table of peach item pull percentages", caption="credit: Magus420") }}
+{{ <figure src="/img/expected-frequency-chart.png" alt="table of peach item pull percentages" caption="credit: Magus420" /> }}
 
 as shown above, not all pulls are equally likely. there are different kinds of turnips, and some turnips do more damage than others. some sequences of pulls are highly valuable, but extremely unlikely to occur - pulling two stitchfaces in a row (especially [when you know how to use them](https://www.youtube.com/watch?v=rrzFeWC5kmc)) is considered a special occassion. there are even advanced techniques like [knitting](https://smashboards.com/threads/postmodern-rng-tactics-knitting-panning-theory-discussion.414626/) that allow peach to continuously pull items faster than she could normally.
 
@@ -134,15 +134,15 @@ you're on your own for acquiring a copy of melee's disk image.
 
 on my copy of dolphin, the debugging interface wasn't visible by default, so i had to enable it:
 
-{{ figure(src="/img/enable-debugging-ui.png", alt="screenshot of 'Enable Debugging UI' checkbox", caption="Options > Configuration > Interface") }}
+{{ <figure src="/img/enable-debugging-ui.png" alt="screenshot of 'Enable Debugging UI' checkbox" caption="Options > Configuration > Interface" /> }}
 
 i also toggled the 'Code', 'Registers', and 'Memory' pane into view:
 
-{{ figure(src="/img/dolphin-view-settings.png", alt="enabling 'Code', 'Registers', and 'Memory' view", caption="View Toggles") }}
+{{ <figure src="/img/dolphin-view-settings.png" alt="enabling 'Code', 'Registers', and 'Memory' view" caption="View Toggles" /> }}
 
 i also moved some panes around:
 
-{{ figure(src="/img/dolphin-ui.png", alt="screenshot of dolphin debugger ui", caption="ready for action") }}
+{{ <figure src="/img/dolphin-ui.png" alt="screenshot of dolphin debugger ui" caption="ready for action" /> }}
 
 i've got an adapter for my gamecube controller setup, and i have a few gecko codes enabled which change the default behavior of the game to make investigation a little easier:
 
@@ -151,11 +151,11 @@ i've got an adapter for my gamecube controller setup, and i have a few gecko cod
 
 the game loads as expected, and we're at the character select screen:
 
-{{ figure(src="/img/dolphin-debugger-game-running.png", alt="screenshot of melee running with debug pane to the side", caption="debugging activated") }}
+{{ <figure src="/img/dolphin-debugger-game-running.png" alt="screenshot of melee running with debug pane to the side" caption="debugging activated" /> }}
 
 you might notice that all instructions are marked as `<unknown>` while the game is running. if we hit the pause button, we can see the instructions:
 
-{{ figure(src="/img/dolphin-unpaused.png", alt="screenshot of instructions in debug pane", caption="instructions are now visible") }}
+{{ <figure src="/img/dolphin-unpaused.png" alt="screenshot of instructions in debug pane" caption="instructions are now visible" /> }}
 
 cool! we can see the address of each instruction, it's parameters, and there's even a callstack showing how we got here.
 
@@ -165,7 +165,7 @@ we already know where `get_random_int` is, so let's try searching for it.
 
 there's a "Search Address" text input available. typing in `0x80380580` and hitting enter will highlight the line for that address. we can right-click this line, select "Add Function" from the context menu, and we'll see a set of instructions highlighted:
 
-{{ figure(src="/img/add_function.png", alt="instructions for get_random_int", caption="get_random_int assembly instructions") }}
+{{ <figure src="/img/add_function.png" alt="instructions for get_random_int" caption="get_random_int assembly instructions" /> }}
 
 the name `zz_80380580_` is not very helpful. we can change that by right-clicking the same line, selecting "Rename symbol" from the context menu, and giving this symbol a better name, `get_random_int`.
 
@@ -196,11 +196,11 @@ understanding what all of these instructions do is outside the scope of this pos
 
 first, let's enable the breakpoint view (i forgot to turn it on earlier):
 
-{{ figure(src="/img/dolphin-view-breakpoints.png", alt="enabling breakpoints", caption="oops we need those") }}
+{{ <figure src="/img/dolphin-view-breakpoints.png" alt="enabling breakpoints" caption="oops we need those" /> }}
 
 navigate to the breakpoint tab, click "New", and let's observe these calls as they execute:
 
-{{ figure(src="/img/log-breakpoint.png", alt="breakpoint configuration", caption="breakpoint configuration") }}
+{{ <figure src="/img/log-breakpoint.png" alt="breakpoint configuration" caption="breakpoint configuration" /> }}
 
 - activate this breakpoint at `0x80380580` (our suspected `get_random_int` function),
 - our condition `r3, 1` means to display the register `r3` in the log (which should be the range on numbers generated),
@@ -208,11 +208,11 @@ navigate to the breakpoint tab, click "New", and let's observe these calls as th
 
 it should look like this (it even includes our renamed symbol from earlier):
 
-{{ figure(src="/img/breakpoint-success.png", alt="configured breakpoint", caption="configured breakpoint enabled") }}
+{{ <figure src="/img/breakpoint-success.png" alt="configured breakpoint" caption="configured breakpoint enabled" /> }}
 
 in melee, attempting to place the character select token when it isn't hovering over a particular character will select a random character - the random button is a modern innovation.
 
-{{ figure(src="/img/random-characters.gif", alt="randomly selecting characters", caption="og random button") }}
+{{ <figure src="/img/random-characters.gif" alt="randomly selecting characters" caption="og random button" /> }}
 
 that random choice has to come from somewhere. in the log, we can actually see some `get_random_int` calls happening already:
 ```
@@ -220,15 +220,13 @@ Breakpoint condition returned: 1. Vars:  r3=25
 ```
 `Vars: r3=25` sounds about right - there are 25 characters in the game!
 
-{% caution() %}
 if you don't see any logs for breakpoints, check your logging configuration ("View" > "Show Logging Configuration") and try enabling all log types.
-{% end %}
 
 # identifying where peach rng calls happen
 
 let's get ingame and try pulling a turnip! hit down-b, hit start to pause the game, and let's see what happened.
 
-{{ figure(src="/img/pull-turnip.png", alt="screenshot of daisy pulling turnip", caption="daisy is the best peach costume") }}
+{{ <figure src="/img/pull-turnip.png" alt="screenshot of daisy pulling turnip" caption="daisy is the best peach costume" /> }}
 
 ```
 ...
@@ -245,19 +243,19 @@ we're not logging the return value of the RNG call right now, but we've identifi
 
 what code is calling `get_random_int(128)`? let's modify our breakpoint with a different condition, and set it to break (not just log):
 
-{{ figure(src="/img/modify-condition.png", alt="new breakpoint condition", caption="check for a specific argument") }}
+{{ <figure src="/img/modify-condition.png" alt="new breakpoint condition" caption="check for a specific argument" /> }}
 
 after pulling another turnip, the game should pause, stopping at `get_random_int`. interestingly, even though peach may have entered the item pull animation, the animation does not show which item peach has pulled, since it hasn't decided yet. let's check out our callstack:
 
-{{ figure(src="/img/link-register.png", alt="callstack screenshot", caption="the path that led us here") }}
+{{ <figure src="/img/link-register.png" alt="callstack screenshot" caption="the path that led us here" /> }}
 
 `LR` represents the ["link register"](https://en.wikipedia.org/wiki/Link_register). whenever we call a subroutine with the `bl` instruction, we populate a special register with the address to return the program counter to once our subroutine finishes executing (usually with a `blr` instruction). if we click on the `LR = 8011d088` address, we can get some context on what's happening before this RNG call is executed, and what we do with the result.
 
 this instruction is happening in the middle of the subroutine, so i scrolled up the previous `blr` instruction (denoting the end of the last subroutine), moved onto the next instruction (`0x8011d018`), and defined a new function as we did previously. i named it `turnip_rng_caller` - it may be used for other interactions, but we're fairly confident it's part of peach's item pull logic.
 
-{% tip() %}
+> [!TIP]
+>
 the address `0x8011d018` is included in the [smashboards community symbol map](https://smashboards.com/threads/smashboards-community-symbol-map.426763/), given the name `_$_wP_Peach_DownB_GenTurnip` - looks like we're on the right track.
-{% end %}
 
 # Peach_DownB_GenTurnip logic
 
@@ -292,7 +290,7 @@ this maps directly to the explanation we saw in "The Basics of RNG in Melee" pre
 
 we can try stepping through the `get_random_int` call until we get to the return `blr` instruction at `0x803805b8`. if we check the value of the `r3` register, we can see the random result returned:
 
-{{ figure(src="/img/r3-return.png", alt="r3 is returning 0x20", caption="0x20 == 32") }}
+{{ <figure src="/img/r3-return.png" alt="r3 is returning 0x20" caption="0x20 == 32" /> }}
 
 `32 != 0`, so this is going to be a turnip. but now that we know how this logic works...what if we got a little mischevious?
 
@@ -300,42 +298,39 @@ we can try stepping through the `get_random_int` call until we get to the return
 
 navigate to the `cmpwi` instruction at `0x8011d08c`:
 
-{{ figure(src="/img/cmpwi.png", alt="cmpwi instruction", caption="our fate is in our own hands") }}
+{{ <figure src="/img/cmpwi.png" alt="cmpwi instruction" caption="our fate is in our own hands" /> }}
 
 let's create a new breakpoint:
 
-{{ figure(src="/img/cmpwi-conditions.png", alt="cmpwi breakpoint conditions", caption="this is not tournament legal") }}
+{{ <figure src="/img/cmpwi-conditions.png" alt="cmpwi breakpoint conditions" caption="this is not tournament legal" /> }}
 
 instead of using the returned value from the `get_random_int(128)` call, we're just going to set register `r3` to 0 when evaluating this instruction.
 
 let's disable our previous breakpoint for now so we can test this out:
 
-{{ figure(src="/img/disable-old-breakpoint.png", alt="disabling get_random_int breakpoint", caption="otherwise, our game stops on every item pull") }}
+{{ <figure src="/img/disable-old-breakpoint.png" alt="disabling get_random_int breakpoint" caption="otherwise, our game stops on every item pull" /> }}
 
 hit start, and let's get pulling!
 
-{{ figure(src="/img/buffed-peach.gif", alt="peach is only throwing items", caption="the dream") }}
+{{ <figure src="/img/buffed-peach.gif" alt="peach is only throwing items" caption="the dream" /> }}
 
 # final destination, no items, beamswords only
 
 i'm quite fond of beamswords, so let's see if we can make them a little more popular. if we refer to our charts from earlier, we expect that there will be a `get_random_int(6)` call. we can modify our `get_random_int` breakpoint condition accordingly:
 
-{{ figure(src="/img/breakpoint-modify.png", alt="r3 == 6", caption="r3 == 6") }}
+{{ <figure src="/img/breakpoint-modify.png" alt="r3 == 6" caption="r3 == 6" /> }}
 
-TODO: remind the player to pull an item first
-TODO: describe branch prediction
- 
 if you've followed along this far, hopefully you're getting the hang of the dolphin debugger. hit the `LR == 8011cf0c` address in the callstack, a familiar `bl ->0x80380580` instruction. let's navigate to the *next instruction* (`0x8011cf10`) and create a new breakpoint, setting `r3 = 5` and continuing execution:
 
-{{ figure(src="/img/mr-saturn-breakpoint.png", alt="r3 = 5", caption="r3 = 5") }}
+{{ <figure src="/img/mr-saturn-breakpoint.png" alt="r3 = 5" caption="r3 = 5" /> }}
 
 once again, let's disable our `get_rand_int` item RNG call:
 
-{{ figure(src="/img/disable-item-rng.png", alt="disabling item rng breakpoint", caption="we're almost there") }}
+{{ <figure src="/img/disable-item-rng.png" alt="disabling item rng breakpoint" caption="we're almost there" /> }}
 
 and finally:
 
-{{ figure(src="/img/sword-peach.gif", alt="peach only pulls beamswords now", caption="watch out marth") }}
+{{ <figure src="/img/sword-peach.gif" alt="peach only pulls beamswords now" caption="watch out marth" /> }}
 
 # closing thoughts
 
