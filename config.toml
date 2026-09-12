@@ -47,7 +47,6 @@ name = "Jonathan Strickland"
 handle = "djanatyn"
 bio = "curious hacker | they/them"
 links = [
-    { name = "GitHub", icon = "github", url = "https://github.com/djanatyn" },
     { name = "Email", icon = "email", url = "mailto:djanatyn@gmail.com" },
 ]
 
@@ -55,8 +54,8 @@ homepage_layout = "about"             # "about" | "list"
 
 nav = [
     { name = "blog", path = "/blog" },
+    { name = "resume", path = "/assets/resume.pdf" },
     { name = "github", path = "https://github.com/djanatyn" },
-    { name = "ogs", path = "https://online-go.com/user/view/435842" },
     { name = "last.fm", path = "https://www.last.fm/user/djanatyn" },
     { name = "steam", path = "https://steamcommunity.com/id/djanatyn" },
 ]

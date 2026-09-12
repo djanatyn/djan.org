@@ -1,0 +1,272 @@
+{
+  "contact": {
+    "name": "Jonathan Strickland",
+    "email": "djanatyn@gmail.com",
+    "github": "https://github.com/djanatyn",
+    "website": "https://djan.org",
+    "linkedin": "https://www.linkedin.com/in/jonathan-strickland-507b2994/"
+  },
+  "skills": [
+    "Rust",
+    "Python",
+    "Terraform",
+    "AWS",
+    "Observability",
+    "Platform Engineering",
+    "CI/CD"
+  ],
+  "history": [
+    {
+      "organization": "Filament",
+      "position": "Software Engineer",
+      "impact": [
+        "Search",
+        "Authorization",
+        "Observability",
+        "MCP",
+        "Matrix",
+        "Infrastructure"
+      ],
+      "duration": "April 2025 - Now",
+      "experiences": [
+        [
+          {
+            "Text": "Developed a member directory profile search system, designing OpenSearch schemas through four iterations with autocomplete, fuzzy matching, semantic vector search, and zero-downtime reindexing, decommissioning the legacy search endpoint"
+          }
+        ],
+        [
+          {
+            "Text": "Led implementation of Activity Center real-time notifications, authoring the RabbitMQ architecture RFC, building a Twisted async connection pool with reconnection and health monitoring, and delivering event-driven reaction tracking and read/unread state"
+          }
+        ],
+        [
+          {
+            "Text": "Developed MCP plugin for Matrix homeserver enabling AI agents to interact with the messaging platform, implementing OAuth 2.1 + PKCE, Postgres-backed session state, and an auditable authorization policy for tools (channel operations, messaging, reactions, profile management)"
+          }
+        ],
+        [
+          {
+            "Text": "Established observability practices across Python and Rust services, integrating Datadog APM and OpenTelemetry, creating the shared "
+          },
+          {
+            "Code": "filament-otel"
+          },
+          {
+            "Text": " Rust library, and instrumenting push notification delivery paths to diagnose production issues"
+          }
+        ],
+        [
+          {
+            "Text": "Created event-driven CLI audit/deployment pipeline using EventBridge, Lambda, Kafka, and Rust consumers to provide deployment visibility, Matrix notifications, and automated ECS/Terraform comments on pull requests"
+          }
+        ]
+      ]
+    },
+    {
+      "organization": "Mercury",
+      "position": "Senior Software Engineer, User Management",
+      "impact": [
+        "Authorization",
+        "Postgres",
+        "Refactoring"
+      ],
+      "duration": "May 2024 - December 2024",
+      "experiences": [
+        [
+          {
+            "Text": "Planned and implemented "
+          },
+          {
+            "Link": {
+              "text": "customizable roles for user management",
+              "url": "https://support.mercury.com/hc/en-us/articles/43553342418836-Setting-up-custom-roles"
+            }
+          },
+          {
+            "Text": ", enabling customers to define roles with fine-grained permissions and account access while coordinating risk evaluation, rollout sequencing, and mitigation work"
+          }
+        ],
+        [
+          {
+            "Text": "Helped to centralize authorization logic spread throughout the codebase into one backend policy, while adapting frontend component authorization logic to defer to the backend as a source of truth"
+          }
+        ]
+      ]
+    },
+    {
+      "organization": "Oso HQ",
+      "position": "Software Engineer",
+      "impact": [
+        "Authorization",
+        "Testing",
+        "Customer Interviews",
+        "Product Research",
+        "Compilers"
+      ],
+      "duration": "November 2022 - November 2023",
+      "experiences": [
+        [
+          {
+            "Text": "Implemented "
+          },
+          {
+            "Link": {
+              "text": "Policy Testing for Oso Cloud",
+              "url": "https://www.osohq.com/docs/reference/polar/tests#polar-tests"
+            }
+          },
+          {
+            "Text": ", extending the Polar language syntax to support executable authorization test cases"
+          }
+        ],
+        [
+          {
+            "Text": "Prototyped and shipped "
+          },
+          {
+            "Link": {
+              "text": "Oso Modeler",
+              "url": "https://ui.osohq.com/modeler"
+            }
+          },
+          {
+            "Text": ", a visual tool for constructing executable authorization policies from authorization requirements"
+          }
+        ],
+        [
+          {
+            "Text": "Extended Polar lexer to preserve comments and prototyped an automatic formatter for policy code"
+          }
+        ]
+      ]
+    },
+    {
+      "organization": "Metafy",
+      "position": "Senior Software Engineer",
+      "impact": [
+        "Ruby",
+        "Search",
+        "Algolia"
+      ],
+      "duration": "June 2022 - September 2022",
+      "experiences": [
+        [
+          {
+            "Text": "Built backend features in Ruby using Hanami, Algolia, and GraphQL, including enhancements to search indexes for real-time filtering of coaches by character, position, and popularity"
+          }
+        ]
+      ]
+    },
+    {
+      "organization": "Recurse Center",
+      "position": "Participant",
+      "impact": [
+        "Rust",
+        "Haskell",
+        "PowerPC",
+        "React",
+        "CTFs",
+        "Pair Programming"
+      ],
+      "duration": "March 2022 - June 2022",
+      "experiences": [
+        [
+          {
+            "Text": "Attended 12-week self-directed programming retreat, building "
+          },
+          {
+            "Link": {
+              "text": "melee-inject",
+              "url": "https://github.com/djanatyn/melee-inject"
+            }
+          },
+          {
+            "Text": ": a Rust reverse-engineering project for modifying Super Smash Bros. Melee GameCube images"
+          }
+        ]
+      ]
+    },
+    {
+      "organization": "American Eagle Outfitters",
+      "position": "Systems Engineer",
+      "impact": [
+        "Kubernetes",
+        "DevOps",
+        "Ansible",
+        "Bamboo",
+        "Bitbucket",
+        "Cloud Foundry",
+        "GCP",
+        "AWS"
+      ],
+      "duration": "December 2016 - January 2022",
+      "experiences": [
+        [
+          {
+            "Text": "Developed and maintained continuous integration pipelines for applications and provisioned infrastructure, empowering teams to create pull requests to apply changes, using Python, Bash, Rust, Haskell"
+          }
+        ],
+        [
+          {
+            "Text": "Used Terraform to provision cloud environments, developing modules for different components of American Eagle infrastructure on AWS, GCP, GKE"
+          }
+        ],
+        [
+          {
+            "Text": "Created self-service \"ephemeral environments\" - when any UI developer opens a pull request, a new environment is launched, the code is deployed, DNS is configured, the developer is sent a link on their pull request"
+          }
+        ]
+      ]
+    },
+    {
+      "organization": "Industry Weapon",
+      "position": "Contractor",
+      "impact": [
+        "Python",
+        "Web",
+        "Angular",
+        "Flask"
+      ],
+      "duration": "December 2015 - June 2016",
+      "experiences": [
+        [
+          {
+            "Text": "Developed and shipped custom software integrations for internal digital signage platform, implementing version control for all teams"
+          }
+        ]
+      ]
+    },
+    {
+      "organization": "Cytobank",
+      "position": "System Administrator",
+      "impact": [
+        "Ruby",
+        "Puppet",
+        "AWS",
+        "OpenVZ"
+      ],
+      "duration": "January 2014 - August 2015",
+      "experiences": [
+        [
+          {
+            "Text": "Used Puppet and Ruby to automate configuration, participated in regular on-call rotations, facilitated migration from OpenVZ physical hosts to AWS"
+          }
+        ]
+      ]
+    }
+  ],
+  "footer_links": [
+    {
+      "text": "linkedin",
+      "url": "https://www.linkedin.com/in/jonathan-strickland-507b2994/"
+    },
+    {
+      "text": "djan.org",
+      "url": "https://djan.org"
+    },
+    {
+      "text": "my cat",
+      "url": "https://domino.garden"
+    }
+  ]
+}
