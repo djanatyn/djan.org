@@ -47,7 +47,7 @@ name = "Jonathan Strickland"
 handle = "djanatyn"
 bio = "curious hacker | they/them"
 links = [
-    { name = "Email", icon = "email", url = "mailto:djanatyn@gmail.com" },
+    { name = "Email", icon = "email", url = "mailto:me@djan.org" },
 ]
 
 homepage_layout = "about"             # "about" | "list"
