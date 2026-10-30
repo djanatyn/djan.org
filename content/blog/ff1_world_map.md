@@ -158,7 +158,7 @@ $ fend '0x8000 - 0x4010'
 
 # decompressing an ocean
 
-alright, let's look at these bytes now that we know where they are;
+alright, let's look at these bytes now that we know where they are:
 
 ```c
 // [0x00004210]> pc 3 @ 0x8200 - 0x3FF0
@@ -168,7 +168,7 @@ const uint8_t array[ARRAY_SIZE] = {
 };
 ```
 
-this row needs to represent 256 map tiles. rather than storing 256 map tiles in sequence, we're using a simple lossless compression run-length encoding compression scheme:
+this row needs to represent 256 map tiles. rather than storing 256 map tiles in sequence, we're using a simple lossless run-length encoding compression scheme:
 
 > The map data is not stored raw, but uses simple compression in a kind of run-length encoding.
 

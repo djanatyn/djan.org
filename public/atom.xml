@@ -126,13 +126,13 @@
 &lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;$ fend &amp;#39;0x8000 - 0x4010&amp;#39;&lt;/span&gt;&lt;/span&gt;
 &lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;0x3ff0&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;h1 id=&quot;decompressing-an-ocean&quot;&gt;decompressing an ocean&lt;a class=&quot;zola-anchor&quot; href=&quot;#decompressing-an-ocean&quot; aria-label=&quot;Anchor link for: decompressing-an-ocean&quot; style=&quot;visibility: hidden;&quot;&gt;&lt;/a&gt;
 &lt;/h1&gt;
-&lt;p&gt;alright, let&#39;s look at these bytes now that we know where they are;&lt;/p&gt;
+&lt;p&gt;alright, let&#39;s look at these bytes now that we know where they are:&lt;/p&gt;
 &lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;c&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;//&lt;/span&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt; [0x00004210]&amp;gt; pc 3 @ 0x8200 - 0x3FF0&lt;/span&gt;&lt;/span&gt;
 &lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;define&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; ARRAY_SIZE&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt; 3&lt;/span&gt;&lt;/span&gt;
 &lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;const&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; uint8_t&lt;/span&gt;&lt;span class=&quot;z-l-9 z-d-12&quot;&gt; array&lt;/span&gt;&lt;span&gt;[&lt;/span&gt;&lt;span&gt;ARRAY_SIZE&lt;/span&gt;&lt;span&gt;]&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; =&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
 &lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;  0x&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;97&lt;/span&gt;&lt;span&gt;,&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; 0x&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;00&lt;/span&gt;&lt;span&gt;,&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; 0x&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;ff&lt;/span&gt;&lt;/span&gt;
 &lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;this row needs to represent 256 map tiles. rather than storing 256 map tiles in sequence, we&#39;re using a simple lossless compression run-length encoding compression scheme:&lt;/p&gt;
+&lt;p&gt;this row needs to represent 256 map tiles. rather than storing 256 map tiles in sequence, we&#39;re using a simple lossless run-length encoding compression scheme:&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;The map data is not stored raw, but uses simple compression in a kind of run-length encoding.&lt;/p&gt;
 &lt;/blockquote&gt;
