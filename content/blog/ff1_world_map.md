@@ -1,5 +1,6 @@
 +++
 title = "parsing the final fantasy 1 NES world map (part 1)"
+description = "how 3 bytes can form an ocean"
 date = 2026-10-30
 draft = false
 
