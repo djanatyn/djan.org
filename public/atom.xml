@@ -5,8 +5,182 @@
     <link rel="self" type="application/atom+xml" href="https://djan.org/atom.xml"/>
     <link rel="alternate" type="text/html" href="https://djan.org/"/>
     <generator uri="https://www.getzola.org/">Zola</generator>
-    <updated>2026-09-09T00:00:00+00:00</updated>
+    <updated>2026-10-30T00:00:00+00:00</updated>
     <id>https://djan.org/atom.xml</id>
+    <entry xml:lang="en">
+        <title>parsing the final fantasy 1 NES world map (part 1)</title>
+        <published>2026-10-30T00:00:00+00:00</published>
+        <updated>2026-10-30T00:00:00+00:00</updated>
+        
+        <author>
+          <name>Unknown</name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://djan.org/blog/ff1-world-map/"/>
+        <id>https://djan.org/blog/ff1-world-map/</id>
+        
+        <content type="html" xml:base="https://djan.org/blog/ff1-world-map/">&lt;p&gt;i&#39;ve started playing final fantasy 1 several times over the years, but i&#39;ve never completed the game. the death mechanics are brutal, i get bored grinding for levels, and i was too prideful to use the &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://strategywiki.org/wiki/Final_Fantasy/The_Journey_Begins#Power_peninsula_(optional)&quot;&gt;peninsula of power&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;these days, i&#39;m approaching the game from a different angle: i&#39;ve been using &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://github.com/lukexor/tetanes&quot;&gt;tetanes&lt;/a&gt; to write some rust code to &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://github.com/djanatyn/chaos-seeker&quot;&gt;play the game&lt;/a&gt; for me!&lt;/p&gt;
+&lt;p&gt;i&#39;ve been implementing this by writing small handlers that read NES memory to interpret the game state. as an example, here&#39;s how i handle the main menu:&lt;/p&gt;
+&lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;rust&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;mod&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; menu&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;    use&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt; super&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;*&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;    ///&lt;/span&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt; Address showing cursor position in menu.&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;    ///&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;    ///&lt;/span&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt; Cursor can point at CONTINUE, or NEW GAME.&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;    pub&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; const&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt; CURSOR_ADDRESS&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; u16&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; =&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt; 0x62&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;    ///&lt;/span&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt; Value of CURSOR_ADDRESS when pointing at NEW GAME.&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;    pub&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; const&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt; NEW_GAME_VALUE&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; u8&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; =&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt; 0x1&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;    fn&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; cursor_new_game&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;state&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; &amp;amp;&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;mut&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; GameState&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; -&amp;gt;&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; bool&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        state&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;read&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;CURSOR_ADDRESS&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; ==&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt; NEW_GAME_VALUE&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;    fn&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; at_character_creation&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;state&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; &amp;amp;&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;mut&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; GameState&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; -&amp;gt;&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; bool&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        state&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;read&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;char_create&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;SLOT_SELECTED_ADDRESS&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; ==&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt; 0x0&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;    ///&lt;/span&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt; Move cursor to new game and hit start.&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    #&lt;/span&gt;&lt;span&gt;[&lt;/span&gt;&lt;span&gt;instrument&lt;/span&gt;&lt;span&gt;]&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;    pub&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; fn&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; handler&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;state&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; &amp;amp;&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;mut&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; GameState&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; -&amp;gt;&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; GameProgress&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;        if&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; at_character_creation&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;state&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;            tracing&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;warn!&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;state&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;.&lt;/span&gt;&lt;span&gt;frame&lt;/span&gt;&lt;span&gt;,&lt;/span&gt;&lt;span class=&quot;z-l-2 z-d-6&quot;&gt; &amp;quot;&lt;/span&gt;&lt;span class=&quot;z-l-2 z-d-6&quot;&gt;reached char creation&lt;/span&gt;&lt;span class=&quot;z-l-2 z-d-6&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;            return&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; GameProgress&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;CharacterCreation&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;        if&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; cursor_new_game&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;state&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;            //&lt;/span&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt; hit start for new game&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;            state&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;toggle&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;JoypadBtnState&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;START&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        }&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; else&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;            //&lt;/span&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt; move cursor down to new game&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;            state&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;toggle&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;JoypadBtnState&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;DOWN&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;        }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;        GameProgress&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;BootMenu&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;    }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;this handler will check if we&#39;re at character creation. if not, it&#39;ll make progress toward that state by checking the cursor position:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;if the cursor is on the &quot;new game&quot; button, it&#39;ll press start.&lt;/li&gt;
+&lt;li&gt;if the cursor is not on the new game button, it&#39;ll press down on the d-pad to move the cursor.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;if executed each frame, eventually we&#39;ll reach the next phase of gameplay (character creation).&lt;/p&gt;
+&lt;p&gt;there are a few magic constants in there: &lt;code&gt;NEW_GAME_VALUE = 0x1&lt;/code&gt;, and &lt;code&gt;CURSOR_ADDRESS = 0x62&lt;/code&gt;. &lt;code&gt;CURSOR_ADDRESS&lt;/code&gt; is an CPU address in the NES&#39;s internal RAM:&lt;/p&gt;
+&lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;rust&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;pub&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; fn&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; read&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;mut&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt; self&lt;/span&gt;&lt;span&gt;,&lt;/span&gt;&lt;span&gt; addr&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; u16&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; -&amp;gt;&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; u8&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;    self&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;.&lt;/span&gt;&lt;span&gt;control_deck&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;bus_mut&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt;read&lt;/span&gt;&lt;span&gt;(&lt;/span&gt;&lt;span&gt;addr&lt;/span&gt;&lt;span&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and &lt;code&gt;NEW_GAME_VALUE = 0x1&lt;/code&gt; is the value it shows when the cursor is on the &lt;code&gt;NEW GAME&lt;/code&gt; button:&lt;/p&gt;
+&lt;figure&gt;
+&lt;img src=&quot;/img/ff1_world_map_cursor.gif&quot; alt=&quot;gif showing 0x62 changing from 0 to 1 in fceux RAM Watch&quot;&gt;&lt;/figure&gt;
+&lt;p&gt;i spend a lot of time in the &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://fceux.com/web/home.html&quot;&gt;fceux&lt;/a&gt; NES emulator&#39;s debugger to figure out exactly how things change in memory as the player interacts with the game. this has been very fun for me!&lt;/p&gt;
+&lt;p&gt;with that said, navigating two choices is fairly simple. final fantasy is about more than menus. immediately after we&#39;ve defeated the character creation screen, before any towns or dungeons, we&#39;re placed into the overworld:&lt;/p&gt;
+&lt;figure&gt;
+&lt;img src=&quot;/img/ff1_world_map_overworld.png&quot; alt=&quot;ingame overworld map in final fantasy 1 for the NES&quot;&gt;&lt;/figure&gt;
+&lt;p&gt;while we can only see a small section of the overworld in normal gameplay, the entire map is quite expansive at 256x256 map tiles:&lt;/p&gt;
+&lt;figure&gt;
+&lt;img src=&quot;/img/ff1_world_map_mikes_rpg_center_map.png&quot; alt=&quot;final fantasy 1 overworld map&quot;&gt;&lt;figcaption&gt;&lt;p&gt;world map from &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://mikesrpgcenter.com/ffantasy/maps/worldmap.html&quot;&gt;Mike&#39;s RPG Center&lt;/a&gt;&lt;/p&gt;&lt;/figcaption&gt;&lt;/figure&gt;
+&lt;p&gt;how do we navigate this world? what is it made out of? how do we get to corneria?&lt;/p&gt;
+&lt;h1 id=&quot;browsing-the-archives&quot;&gt;browsing the archives&lt;a class=&quot;zola-anchor&quot; href=&quot;#browsing-the-archives&quot; aria-label=&quot;Anchor link for: browsing-the-archives&quot; style=&quot;visibility: hidden;&quot;&gt;&lt;/a&gt;
+&lt;/h1&gt;
+&lt;p&gt;fortunately for me, final fantasy 1 has been researched by fans for decades. &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://tcrf.net/The_Cutting_Room_Floor&quot;&gt;the cutting room floor&lt;/a&gt; wiki has a section detailing the ROM map, describing the &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://datacrystal.tcrf.net/wiki/Final_Fantasy/ROM_map#World_map_data&quot;&gt;world map data format&lt;/a&gt; that we&#39;re dealing with here:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;World map data is stored in ROM Bank &lt;code&gt;0x01&lt;/code&gt;, which is accessed by the CPU at address &lt;code&gt;0x8000&lt;/code&gt;, and located at &lt;code&gt;0x4000&lt;/code&gt; in the ROM image. (&lt;code&gt;0x4010&lt;/code&gt; for iNES files).&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;i&#39;ll be using &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://rizin.re/&quot;&gt;&lt;code&gt;rizin&lt;/code&gt;&lt;/a&gt; to follow along with the wiki&#39;s description:&lt;/p&gt;
+&lt;figure&gt;
+&lt;img src=&quot;/img/ff1_world_map_pointer_table.png&quot; alt=&quot;final fantasy 1 overworld map&quot;&gt;&lt;figcaption&gt;&lt;p&gt;&lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://gist.github.com/djanatyn/96f20c9b261c4c4c550c698d4bc4f8bc#file-ff1_world_map_rizin_structs-md&quot;&gt;world map data as raw bytes&lt;/a&gt;&lt;/p&gt;&lt;/figcaption&gt;&lt;/figure&gt;
+&lt;p&gt;the &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://datacrystal.tcrf.net/wiki/Final_Fantasy/World_map_data&quot;&gt;&lt;code&gt;final fantasy/world map data&lt;/code&gt;&lt;/a&gt; page describes the format of this data in more detail, so we can start to make sense of it:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;From &lt;code&gt;0x4010&lt;/code&gt; to &lt;code&gt;0x4210&lt;/code&gt; there are 256 little-endian 16-bit integer values representing addresses in the NES memory map (with the &lt;code&gt;0x4010&lt;/code&gt; ROM bank currently in place) that mark the left-hand-side beginnings of each 256-tile row of the map.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;that means that this is a list of addresses. knowing that they&#39;re &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://en.wikipedia.org/wiki/Endianness&quot;&gt;little-endian&lt;/a&gt; 16-bit integers, we can start translating sequences of bytes like &lt;code&gt;0x00&lt;/code&gt; and &lt;code&gt;0x82&lt;/code&gt; into the address &lt;code&gt;$8200&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;we can &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://book.rizin.re/src/analysis/types.html&quot;&gt;define some structs&lt;/a&gt; with rizin to inspect these values within the ROM:&lt;/p&gt;
+&lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;c&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;//&lt;/span&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt; a pointer to a world map row&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;struct&lt;/span&gt;&lt;span&gt; Location &lt;/span&gt;&lt;span&gt;{&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; uint16_t&lt;/span&gt;&lt;span&gt; address&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;span&gt; }&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;//&lt;/span&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt; a collection of 256 pointers&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;struct&lt;/span&gt;&lt;span&gt; WorldMapTable &lt;/span&gt;&lt;span&gt;{&lt;/span&gt;&lt;span&gt; Location &lt;/span&gt;&lt;span class=&quot;z-l-9 z-d-12&quot;&gt;address&lt;/span&gt;&lt;span&gt;[&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;256&lt;/span&gt;&lt;span&gt;]&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;span&gt; }&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;figure&gt;
+&lt;img src=&quot;/img/ff1_world_map_rizin_structs.png&quot; alt=&quot;defining structs in rizin&quot;&gt;&lt;figcaption&gt;&lt;p&gt;&lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://gist.github.com/djanatyn/96f20c9b261c4c4c550c698d4bc4f8bc#file-ff1_world_map_rizin_structs-md&quot;&gt;translating bytes into pointers&lt;/a&gt;&lt;/p&gt;&lt;/figcaption&gt;&lt;/figure&gt;
+&lt;p&gt;this is a &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://www.nesdev.org/wiki/Pointer_table&quot;&gt;pointer table&lt;/a&gt;. the game doesn&#39;t need to load all 256 rows of the map into memory, only the rows that are nearby the player&#39;s current world map coordinate.&lt;/p&gt;
+&lt;p&gt;you might notice that while each row is 256 map tiles, the first row is at &lt;code&gt;$8200&lt;/code&gt;, and the second row is at &lt;code&gt;$8203&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;how could 256 map tiles fit into 3 bytes?&lt;/p&gt;
+&lt;h1 id=&quot;banking-briefly&quot;&gt;banking, briefly&lt;a class=&quot;zola-anchor&quot; href=&quot;#banking-briefly&quot; aria-label=&quot;Anchor link for: banking-briefly&quot; style=&quot;visibility: hidden;&quot;&gt;&lt;/a&gt;
+&lt;/h1&gt;
+&lt;p&gt;we can start answering our question by looking at those 3 bytes, at CPU address &lt;code&gt;$8200&lt;/code&gt;. however, i must note that i&#39;m making a distinction in my notation already: &lt;code&gt;0x8200&lt;/code&gt; is a 16-bit integer, but &lt;code&gt;$8200&lt;/code&gt; (with a &lt;code&gt;$&lt;/code&gt;) is a &lt;strong&gt;16-bit CPU address&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;the CPU address &lt;code&gt;$8200&lt;/code&gt; does &lt;em&gt;not&lt;/em&gt; correspond to offset &lt;code&gt;0x8200&lt;/code&gt; in the ROM.&lt;/p&gt;
+&lt;p&gt;addressable memory was limited to 64K on the 6502 microprocessor that the NES used. before interfacing with a cartridge, much of that memory is &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://www.nesdev.org/wiki/CPU_memory_map&quot;&gt;already mapped&lt;/a&gt; to core functionality for the console: drawing pictures, processing audio, performing I/O, and internal RAM. at the end of the memory map, the range &lt;code&gt;$4020-$FFFF&lt;/code&gt; is reserved for cartridge use.&lt;/p&gt;
+&lt;p&gt;this range is not large enough to hold the entire final fantasy 1 ROM, even if we left out unnecessary headers:&lt;/p&gt;
+&lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;$ du -h ff1.nes&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;260K	ff1.nes&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;to work around the restriction of limited addressable memory, while simultaneously allowing cartridges to extend the capabilities of the NES itself, the concept of &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://www.nesdev.org/wiki/Mapper&quot;&gt;mappers&lt;/a&gt; emerged:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NES games come in cartridges, and inside of those cartridges are various circuits and hardware. Different games use different circuits and hardware, and the configuration and capabilities of such cartridges is commonly called their mapper. Mappers are designed to extend the system and bypass its limitations, such as by adding RAM to the cartridge or even extra sound channels. More commonly though, &lt;strong&gt;mappers are designed to allow games larger than 40K to be made.&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;final fantasy 1&#39;s PRG-ROM (&quot;program&quot; read-only memory) contains &lt;em&gt;16&lt;/em&gt; different banks of &lt;em&gt;16K&lt;/em&gt; each, for 256K of data. the mapper allows the cartridge to switch between banks dynamically during gameplay, mapping the appropriate bank into the 6502 CPU address space! in our case, there&#39;s a 16K bank that begins at file offset &lt;code&gt;0x4010&lt;/code&gt;, which gets &quot;mapped&quot; into CPU address &lt;code&gt;$8000&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;there are lots of different mappers! this &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://nescartdb.com/profile/view/154/final-fantasy&quot;&gt;particular cart&lt;/a&gt; uses the &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://www.nesdev.org/wiki/MMC1&quot;&gt;MMC1&lt;/a&gt; mapper.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;p&gt;we&#39;re not running a NES emulator in rizin, so we&#39;ll need to do some translation from CPU-relative addresses to ROM-relative addresses:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Since this bank will loaded into the NES memory map at readable address &lt;code&gt;$8000&lt;/code&gt;, all memory pointers in the ROM must point to the row&#39;s ROM file address + &lt;code&gt;0x3FF0&lt;/code&gt;. To translate a memory pointer back into a ROM file address, you subtract &lt;code&gt;0x3FF0&lt;/code&gt; instead.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;this value &lt;code&gt;0x3FF0&lt;/code&gt; is just the difference between the CPU address and the bank ROM offset:&lt;/p&gt;
+&lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;$ fend &amp;#39;0x8000 - 0x4010&amp;#39;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;0x3ff0&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;h1 id=&quot;decompressing-an-ocean&quot;&gt;decompressing an ocean&lt;a class=&quot;zola-anchor&quot; href=&quot;#decompressing-an-ocean&quot; aria-label=&quot;Anchor link for: decompressing-an-ocean&quot; style=&quot;visibility: hidden;&quot;&gt;&lt;/a&gt;
+&lt;/h1&gt;
+&lt;p&gt;alright, let&#39;s look at these bytes now that we know where they are;&lt;/p&gt;
+&lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;c&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt;//&lt;/span&gt;&lt;span class=&quot;z-l-5 z-d-3&quot;&gt; [0x00004210]&amp;gt; pc 3 @ 0x8200 - 0x3FF0&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;#&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;define&lt;/span&gt;&lt;span class=&quot;z-l-6 z-d-7&quot;&gt; ARRAY_SIZE&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt; 3&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;const&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; uint8_t&lt;/span&gt;&lt;span class=&quot;z-l-9 z-d-12&quot;&gt; array&lt;/span&gt;&lt;span&gt;[&lt;/span&gt;&lt;span&gt;ARRAY_SIZE&lt;/span&gt;&lt;span&gt;]&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; =&lt;/span&gt;&lt;span&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt;  0x&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;97&lt;/span&gt;&lt;span&gt;,&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; 0x&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;00&lt;/span&gt;&lt;span&gt;,&lt;/span&gt;&lt;span class=&quot;z-l-8 z-d-10&quot;&gt; 0x&lt;/span&gt;&lt;span class=&quot;z-l-1 z-d-4&quot;&gt;ff&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;}&lt;/span&gt;&lt;span&gt;;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;this row needs to represent 256 map tiles. rather than storing 256 map tiles in sequence, we&#39;re using a simple lossless compression run-length encoding compression scheme:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;The map data is not stored raw, but uses simple compression in a kind of run-length encoding.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;there&#39;s a brief explanation of the format in the ROM Map documentation:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Each entry in this data area is either 1 byte or 2 bytes long. The most significant bit of the first byte is set if there is a second byte for this entry. The first byte (excluding the MSB flag) specifies the tile number (0-127). The second byte, if present, specifies the number of tiles that should be displayed. If the second byte is 2, then two tiles should be rendered. If the second byte is 0, then the tile should be rendered 256 times. A single byte entry with the value of 0xFF represents the end of the row.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;MSB here stands for &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://en.wikipedia.org/wiki/Bit_numbering#Bit_significance_and_indexing&quot;&gt;&quot;most significant bit&quot;&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;immediately, we&#39;ve learned a few things about the first byte:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;if the most significant bit is unset (&lt;code&gt;0b0XXX_XXXX&lt;/code&gt;), it&#39;s a single tile, and&lt;/li&gt;
+&lt;li&gt;if the most significant bit is set (&lt;code&gt;0b1XXX_XXXX&lt;/code&gt;) , it&#39;s a repeated tile, and the next byte is its repetition count.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;we can use a &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://en.wikipedia.org/wiki/Mask_(computing)&quot;&gt;bitmask&lt;/a&gt; to check that bit. &lt;code&gt;number &amp;amp; 0b1000_0000&lt;/code&gt; will return 0 if the bit is unset:&lt;/p&gt;
+&lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;&amp;gt; 0x97 in binary&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;10010111&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;&amp;gt; (0x97 and 0b1000_0000) != 0&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;true&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;it&#39;s not unset! because the bit is set, we know &lt;strong&gt;this is a repeated tile&lt;/strong&gt;!&lt;/p&gt;
+&lt;p&gt;to figure out &lt;em&gt;which&lt;/em&gt; tile is repeated, we can use the same bitmask with an &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://en.wikipedia.org/wiki/Bitwise_operation#XOR&quot;&gt;xor&lt;/a&gt; to drop the MSB:&lt;/p&gt;
+&lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;&amp;gt; 0x97 xor 0b1000_0000&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;0x17&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;alternatively, it&#39;s also common to clear the MSB with an AND, which gives us the same result:&lt;/p&gt;
+&lt;pre class=&quot;giallo z-l-code z-d-code&quot; &gt;&lt;code data-lang=&quot;plain&quot;&gt;&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;&amp;gt; 0x97 and 0b0111_1111&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;giallo-l&quot;&gt;&lt;span&gt;0x17&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;0x17&lt;/code&gt; is the tile for &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://datacrystal.tcrf.net/wiki/Final_Fantasy/World_map_data#FF1_Overworld_Tile_Values&quot;&gt;Ocean&lt;/a&gt;.&lt;/p&gt;
+&lt;figure&gt;
+&lt;img src=&quot;/img/ff1_world_map_ocean_tile.png&quot; alt=&quot;an ocean&quot;&gt;&lt;/figure&gt;
+&lt;p&gt;how much ocean?&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;[..] If the second byte is 0, then the tile should be rendered &lt;strong&gt;256 times&lt;/strong&gt;. A single byte entry with the value of 0xFF represents &lt;strong&gt;the end of the row.&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;code&gt;[0x97, 0x00, 0xFF]&lt;/code&gt; is a row that&#39;s just 256 map tiles of ocean.&lt;/p&gt;
+&lt;p&gt;considering the alternative (&lt;code&gt;[0x17, 0x17, 0x17...]&lt;/code&gt;), we saved a &lt;em&gt;lot&lt;/em&gt; of bytes. without getting too clever, we&#39;d need 256 bytes for the ocean tiles, and another byte to end the row.&lt;/p&gt;
+&lt;p&gt;instead, we only needed 3, saving ROM space and reducing ROM reads in exchange for some CPU work!&lt;/p&gt;
+&lt;h1 id=&quot;to-be-continued&quot;&gt;to be continued&lt;a class=&quot;zola-anchor&quot; href=&quot;#to-be-continued&quot; aria-label=&quot;Anchor link for: to-be-continued&quot; style=&quot;visibility: hidden;&quot;&gt;&lt;/a&gt;
+&lt;/h1&gt;
+&lt;p&gt;in our next post, we&#39;ll:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;build a finite state machine to parse these tiles,&lt;/li&gt;
+&lt;li&gt;render PNG images based on the tile data we parse,&lt;/li&gt;
+&lt;li&gt;learn to parse tile properties with bitmasks using 2008 romhacking notes, and&lt;/li&gt;
+&lt;li&gt;generate a topological map that we&#39;ll use for path-finding!&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;see you later! i hope you have a great day :)&lt;/p&gt;
+</content>
+        
+    </entry>
     <entry xml:lang="en">
         <title>showing online-go.com games on an e-ink inkplate display</title>
         <published>2026-09-09T00:00:00+00:00</published>

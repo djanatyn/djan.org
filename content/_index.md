@@ -4,7 +4,7 @@ template = 'home.html'
 [extra]
 lang = "en"
 toc = true
-recent = true
+recent = false
 recent_max = 15
 recent_more_text = "more posts"
 date_format = "%b %-d, %Y"
