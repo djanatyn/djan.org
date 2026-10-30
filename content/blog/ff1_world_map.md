@@ -126,7 +126,7 @@ we can start answering our question by looking at those 3 bytes, at CPU address 
 
 the CPU address `$8200` does *not* correspond to offset `0x8200` in the ROM. 
 
-addressable memory was limited to 64K on the 6502 microprocessor that the NES used. before interfacing with a cartridge, much of that memory is [already mapped](https://www.nesdev.org/wiki/CPU_memory_map) to core functionality for the console: drawing pictures, processing audio, performing I/O, and internal RAM. at the end of the memory map, the range `$4020-$FFFF` is reserved for cartridge use.
+addressable memory was limited to 64K on the [6502 microprocessor](https://en.wikipedia.org/wiki/MOS_Technology_6502) that the NES used. before interfacing with a cartridge, much of that memory is [already mapped](https://www.nesdev.org/wiki/CPU_memory_map) to core functionality for the console: drawing pictures, processing audio, performing I/O, and internal RAM. at the end of the memory map, the range `$4020-$FFFF` is reserved for cartridge use.
 
 this range is not large enough to hold the entire final fantasy 1 ROM, even if we left out unnecessary headers:
 ```
