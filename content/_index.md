@@ -18,4 +18,4 @@ into reverse-engineering, observability, tracing, recreational programming, and 
 
 {{ <figure src="/img/domino-square.jpg" alt="a picture of my cat domino" caption="my cat domino" width="200" height="200" /> }}
 
----
+<center><script async defer src="https://www.recurse-scout.com/loader.js?t=d0346a9d5a9efe4d63aa1847d057d108"></script></center>

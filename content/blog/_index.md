@@ -16,3 +16,5 @@ outdated_alert_days = 12
 outdated_alert_text_before = "This article was last updated "
 outdated_alert_text_after = " days ago and may be out of date."
 +++
+
+<script async defer src="https://www.recurse-scout.com/loader.js?t=d0346a9d5a9efe4d63aa1847d057d108"></script>
