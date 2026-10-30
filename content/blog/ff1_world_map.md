@@ -10,6 +10,7 @@ categories = ["lab notebook"]
 toc = false
 code_copy = true
 comment = false
+og_image = "/img/ff1_world_map_overworld.png"
 +++
 
 i've started playing final fantasy 1 several times over the years, but i've never completed the game. the death mechanics are brutal, i get bored grinding for levels, and i was too prideful to use the [peninsula of power](https://strategywiki.org/wiki/Final_Fantasy/The_Journey_Begins#Power_peninsula_(optional)).
