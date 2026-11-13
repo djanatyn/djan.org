@@ -1,0 +1,249 @@
++++
+title = "exploring xtensa in llvm"
+description = "getting sidetracked running zig on esp32"
+date = 2026-11-12
+draft = true
+
+[taxonomies]
+categories = ["lab notebook"]
+
+[extra]
+toc = false
+code_copy = true
+comment = false
+og_image = "/img/todo.png" 
++++
+
+i'm not a confident C++ programmer, and i would like to write as little C++ as possible. i've been largely successful at this, but i sometimes struggle to avoid writing C++ in embedded environments, especially when writing code for the ESP32.
+
+i've been using the excellent [Inkplate Arduino Library](https://github.com/SolderedElectronics/Inkplate-Arduino-library) with [`arduino-cli`](https://docs.arduino.cc/arduino-cli/) for several projects recently, and i was curious if [zig](https://ziglang.org/) could help!
+
+C++ supports C ABI interop by setting [external language linkage](https://en.cppreference.com/cpp/language/language_linkage) to "C", and
+zig has [excellent support](https://ziglang.org/documentation/master/#C) for interacting with the C ABI:
+
+{% <quote cite="[Why Zig When There is Already C++, D, and Rust?](https://ziglang.org/intro/why_zig_rust_d_cpp/)"> %}
+Currently it is pragmatically true that C is the most versatile and portable language. Any language that does not have the ability to interact with C code risks obscurity. Zig is attempting to become the new portable language for libraries by simultaneously making it straightforward to conform to the C ABI for external functions, and introducing safety and language design that prevents common bugs within the implementations.
+{% </quote> %}
+
+{% <quote cite="[Export functions, variables, and types for C code to depend on](https://ziglang.org/learn/overview/)"> %}
+One of the primary use cases for Zig is exporting a library with the C ABI for other programming languages to call into. The export keyword in front of functions, variables, and types causes them to be part of the library API:
+```zig
+export fn add(a: i32, b: i32) i32 {
+    return a + b;
+}
+```
+{% </quote> %}
+
+i would love to spend more time writing zig, and i would strongly prefer to use zig instead of C++ for my inkplate experiments.
+
+my usage of the inkplate API is very simple. while i [may not be able to call it directly](https://en.wikipedia.org/wiki/Name_mangling) from zig, i could create a thin wrapper providing a C-ABI interface to the library functions i need.
+
+---
+
+can zig save the day?
+
+i think you already know the answer.
+
+# step 1: emit xtensa
+
+my hardware target is the [inkplate tempera4](https://soldered.com/products/inkplate-4-tempera), which uses an ESP32 microcontroller. 
+
+---
+
+i kept tinkering with `build.zig` and eventually got to a state where i was *almost* always hitting this compiler error:
+```bash
+~/code/zig-inkplate: ~/code/zig/build/stage3/bin/zig build firmware
+firmware
+└─ run arduino-cli
+   └─ compile obj zig_app debug xtensa-freestanding-none failure
+error: error: <unknown>:0: fixup value must be 4-byte aligned
+
+
+error: process exited with code 1
+failed command: /Users/jstrickland/code/zig/build/stage3/bin/zig build-obj -target xtensa-freestanding-none -mcpu esp32 -Mroot=zig/demo.zig --cache-dir .zig-cache --global-cache-dir /Users/jstrickland/.cache/zig --build-root . --name zig_app --zig-lib-dir /Users/jstrickland/code/zig/build/stage3/lib/zig/ --listen=-
+
+Build Summary: 0/3 steps succeeded (1 failed)
+firmware transitive failure
+└─ run arduino-cli transitive failure
+   └─ compile obj zig_app debug xtensa-freestanding-none failure
+```
+
+i was getting strange and intermittent behavior. i tried to isolate to the smallest reproducible case i could find, but the error was inconsistent. sometimes i could compile calling inkplate API functions from my shim with no issues:
+
+```bash
+cat zig/demo.zig && ~/code/zig/build/stage3/bin/zig build firmware
+```
+```zig
+const shim = @import("shim");
+
+export fn zig_app_setup() void {
+    shim.serial_print("hello world");
+}
+
+export fn zig_app_loop() void {
+    shim.serial_print("hello world");
+}
+```
+```
+/Users/jstrickland/Library/Arduino15/packages/soldered-inkplate-boards/tools/esp-x32/2511/bin/../lib/gcc/xtensa-esp-elf/14.2.0/../../../../xtensa-esp-elf/bin/ld: warning: _floatdidf.o: missing .note.GNU-stack section implies executable stack
+/Users/jstrickland/Library/Arduino15/packages/soldered-inkplate-boards/tools/esp-x32/2511/bin/../lib/gcc/xtensa-esp-elf/14.2.0/../../../../xtensa-esp-elf/bin/ld: NOTE: This behaviour is deprecated and will be removed in a future version of the linker
+Sketch uses 957503 bytes (30%) of program storage space. Maximum is 3145728 bytes.
+Global variables use 90156 bytes (27%) of dynamic memory, leaving 237524 bytes for local variables. Maximum is 327680 bytes.
+```
+
+other times, i couldn't call a single function without encountering the error:
+```bash
+cat zig/demo.zig && ~/code/zig/build/stage3/bin/zig build-obj zig/demo.zig \
+    -target xtensa-freestanding-none -mcpu=esp32 \
+    -O ReleaseSmall -femit-bin=/tmp/demo-extern-decl.o
+echo "exit=$?"
+```
+```zig
+extern fn serial_print(text: [*:0]const u8) callconv(.c) void;
+
+export fn zig_app_setup() void {
+    serial_print("starting!");
+}
+
+export fn zig_app_loop() void {}
+```
+```
+error: <unknown>:0: fixup value must be 4-byte aligned
+
+exit=1
+```
+
+at the time, i worked through the issue with some LLM-assistance: after explaining my predicament, an open weight model was able to isolate the issue in the LLVM source code, identify the problem, and to apply a patch which fixed my compilation issues without much prompting.
+
+since then, i've spent some time studying why this error occurred, what the code causing it was trying to do, and why the fix works! i learned about the Xtensa ISA, the `l32r` instruction, and LLVM compilers internals like `MCFixup`. if you're interested in that kind of thing, keep reading!
+
+---
+
+<!-- xtensa proposal -->
+https://discourse.llvm.org/t/rfc-tensilica-xtensa-esp32-backend/57835
+
+this error is from the `XtensaAsmBackend` `adjustFixupValue` function.
+{% <quote cite="[`llvm/lib/Target/Xtensa/MCTargetDesc/XtensaAsmBackend.cpp`](https://github.com/llvm/llvm-project/blob/ca7933e47d3a3451d81e72ac174dcb5aa28b59d1/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaAsmBackend.cpp#L117-L125)"> %}
+```c++
+case Xtensa::fixup_xtensa_l32r_16:
+  unsigned Offset = Fixup.getOffset();
+  if (Offset & 0x3)
+    Value -= 4;
+  if (!isInt<18>(Value) && (Value & 0x20000))
+    Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+  if (Value & 0x3)
+    Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned");
+  return (Value & 0xffffc) >> 2;
+```
+{% </quote> %}
+
+this switch case is for `Xtensa::fixup_xtensa_l32r_16` in particular. the `l32r` instruction is short for "Load 32-bit PC-Relative":
+
+> L32R is a PC-relative 32-bit load from memory. It is typically used to load constant values into a register when the constant cannot be encoded in a MOVI instruction.
+
+it loads with an offset relative to the current program counter, so it can specify any address up to 256KB *before* it's location:
+> L32R forms a virtual address by adding the 16-bit one-extended constant value encoded in the instruction word shifted left by two to the address of the L32R plus three with the two least significant bits cleared. Therefore, **the offset can always specify 32-bit aligned addresses from -262141 to -4 bytes from the address of the L32R instruction.** 32 bits (four bytes) are read from the physical address.
+
+importantly, the stored constant is shifted left by two at execution time, which effectively multiplies it by 4 (2^2=4). this means the encoder must *divide* the the byte distance by 4 to fit it into the field. if the field cannot be divided by 4, it can't be represented, which is what the fixup error means: "value must be 4-byte aligned".
+
+`Xtensa::fixup_xtensa_l32r_16` is an `MCFixup` kind. the class definition gives us some more context on what a fixup is, and why they're needed:
+{% <quote cite="[`llvm/include/llvm/MC/MCFixup.h`](https://github.com/llvm/llvm-project/blob/ca7933e47d3a3451d81e72ac174dcb5aa28b59d1/llvm/include/llvm/MC/MCFixup.h#L47-L81)"> %}
+```
+/// Encode information on a single operation to perform on a byte
+/// sequence (e.g., an encoded instruction) which requires assemble- or run-
+/// time patching.
+///
+/// Fixups are used any time the target instruction encoder needs to represent
+/// some value in an instruction which is not yet concrete. The encoder will
+/// encode the instruction assuming the value is 0, and emit a fixup which
+/// communicates to the assembler backend how it should rewrite the encoded
+/// value.
+///
+/// During the process of relaxation, the assembler will apply fixups as
+/// symbolic values become concrete. When relaxation is complete, any remaining
+/// fixups become relocations in the object file (or errors, if the fixup cannot
+/// be encoded on the target).
+```
+{% </quote> %}
+
+this makes sense given what we know about `l32r`, as the instruction's word can only be determined once we've placed the data literal it refers to.
+
+what places those literals? they're placed in a "ConstantPool" by `XtensaAsmPrinter::emitConstantPool()`:
+{% <quote cite=""> %}
+```c++
+// EmitConstantPool - Print to the current output stream assembly
+// representations of the constants in the constant pool MCP. This is
+// used to print out constants which have been "spilled to memory" by
+// the code generator.
+void XtensaAsmPrinter::emitConstantPool() {
+  const Function &F = MF->getFunction();
+  const MachineConstantPool *MCP = MF->getConstantPool();
+  const std::vector<MachineConstantPoolEntry> &CP = MCP->getConstants();
+  if (CP.empty())
+    return;
+
+  OutStreamer->pushSection();
+
+  auto *TS =
+      static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
+  MCSection *CS = getObjFileLowering().SectionForGlobal(&F, TM);
+  TS->startLiteralSection(CS);
+
+  int CPIdx = 0;
+  for (const MachineConstantPoolEntry &CPE : CP) {
+    emitMachineConstantPoolEntry(CPE, CPIdx++);
+  }
+
+  OutStreamer->popSection();
+}
+```
+{% </quote> %}
+
+An `MCP` is a `MachineConstantPool`, which is part of the `MC` layer. the instruction-selection pipeline fills in the pool as it runs. 
+
+// TODO: ?
+these constants go in their own section, which is created by `XtensaTargetElfStreamer::startLiteralSection`:
+{% <quote cite="[`llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp`](https://github.com/llvm/llvm-project/blob/ca7933e47d3a3451d81e72ac174dcb5aa28b59d1/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp#L106-L115)"> %}
+```c++
+void XtensaTargetELFStreamer::startLiteralSection(MCSection *BaseSection) {
+  MCContext &Context = getStreamer().getContext();
+
+  std::string SectionName = getLiteralSectionName(BaseSection->getName());
+
+  MCSection *ConstSection = Context.getELFSection(
+      SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
+
+  ConstSection->setAlignment(Align(4));
+}
+```
+{% </quote> %}
+
+we can see that it's setting the alignment to 4 already! it looks like it's operation on a `ConstSection` with a name retrieved by `getLiteralSectionName`. let's look at that function as well: 
+
+<!-- ~/code/llvm-project-22/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp -->
+{% <quote cite="[TODO](https://github.com/llvm/llvm-project/blob/ca7933e47d3a3451d81e72ac174dcb5aa28b59d1/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp#L106-L115)"> %}
+```c++
+static std::string getLiteralSectionName(StringRef CSectionName) {
+  std::size_t Pos = CSectionName.find(".text");
+  std::string SectionName;
+  if (Pos != std::string::npos) {
+    SectionName = CSectionName.substr(0, Pos);
+
+    if (Pos > 0)
+      SectionName += ".text";
+
+    CSectionName = CSectionName.drop_front(Pos);
+    CSectionName.consume_front(".text");
+
+    SectionName += ".literal";
+    SectionName += CSectionName;
+  } else {
+    SectionName = CSectionName;
+    SectionName += ".literal";
+  }
+  return SectionName;
+}
+```
+{% </quote> %}
+
+---
