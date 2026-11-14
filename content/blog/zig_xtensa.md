@@ -1,8 +1,8 @@
 +++
-title = "exploring xtensa in llvm"
-description = "getting sidetracked running zig on esp32"
-date = 2026-11-12
-draft = true
+title = "using the inkplate C++ API on ESP32, from zig"
+description = "replacing C++ in my life one step at a time"
+date = 2026-11-14
+draft = false
 
 [taxonomies]
 categories = ["lab notebook"]
@@ -11,10 +11,12 @@ categories = ["lab notebook"]
 toc = false
 code_copy = true
 comment = false
-og_image = "/img/todo.png" 
+og_image = "/img/zig_inkplate_hello_world.png" 
 +++
 
-i'm not a confident C++ programmer, and i would like to write as little C++ as possible. i've been largely successful at this, but i sometimes struggle to avoid writing C++ in embedded environments, especially when writing code for the ESP32.
+i'm not a confident C++ programmer, and i would like to write as little C++ as possible.
+
+i've been largely successful at this, but i sometimes struggle in embedded environments, especially when writing code for the ESP32.
 
 i've been using the excellent [Inkplate Arduino Library](https://github.com/SolderedElectronics/Inkplate-Arduino-library) with [`arduino-cli`](https://docs.arduino.cc/arduino-cli/) for several projects recently, and i was curious if [zig](https://ziglang.org/) could help!
 
@@ -38,17 +40,208 @@ i would love to spend more time writing zig, and i would strongly prefer to use 
 
 my usage of the inkplate API is very simple. while i [may not be able to call it directly](https://en.wikipedia.org/wiki/Name_mangling) from zig, i could create a thin wrapper providing a C-ABI interface to the library functions i need.
 
-can zig save the day?
+# identifying platform support
 
-# step 1: emit xtensa
+my hardware target is the [inkplate tempera4](https://soldered.com/products/inkplate-4-tempera), which uses an ESP32 microcontroller. this microcontroller uses the [xtensa](https://github.com/espressif/xtensa-isa-doc) isa, so i'll need to set my `build.zig` appropriately.
 
-my hardware target is the [inkplate tempera4](https://soldered.com/products/inkplate-4-tempera), which uses an ESP32 microcontroller. this microcontroller uses the Xtensa 
+zig has a list of [support platforms](https://ziglang.org/learn/platform-support/), and [`xtensa-linux`](https://ziglang.org/learn/platform-support/xtensa-linux/) is currently tier 4:
 
----
+> The compiler can generate assembly or C source code for this target.
+
+that's good enough for me! hovering over the "code gen." column in the support table shows that it requires an LLVM experimental backend.
+
+even though the backend is still experimental, it's been around for a while. it looks like it's under active development by Espressif, with an early proposal in march 2021:
+
+{% <quote cite="[[RFC] Tensilica Xtensa (ESP32 Backend)](https://discourse.llvm.org/t/rfc-tensilica-xtensa-esp32-backend/57835)"> %}
+Hi All!
+
+On behalf of Espressif Systems, I would like to propose Xtensa backend to be added as an experimental to LLVM project.
+{% </quote> %}
+
+# compiling llvm with the experimental xtensa backend
+
+compiling llvm takes a while, but wasn't too tricky. the `README.md` for zig has a recommended approach that i adapted:
+{% <quote cite="[Building LLVM, LLD, and Clang from Source](https://codeberg.org/ziglang/zig#release)"> %}
+```bash
+cd ~/Downloads
+git clone --depth 1 --branch release/22.x https://github.com/llvm/llvm-project llvm-project-22
+cd llvm-project-22
+git checkout release/22.x
+
+mkdir build-release
+cd build-release
+cmake ../llvm \
+  -DCMAKE_INSTALL_PREFIX=$HOME/local/llvm22-assert \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS="lld;clang" \
+  -DLLVM_ENABLE_LIBXML2=OFF \
+  -DLLVM_ENABLE_TERMINFO=OFF \
+  -DLLVM_ENABLE_LIBEDIT=OFF \
+  -DLLVM_ENABLE_ASSERTIONS=ON \
+  -DLLVM_ENABLE_ZSTD=OFF \
+  -DLLVM_PARALLEL_LINK_JOBS=1 \
+  -G Ninja
+ninja install
+```
+{% </quote> %}
+
+i added a [cmake flag](https://llvm.org/docs/CMake.html#llvm-related-variables) to enable xtensa:
+```bash
+-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=Xtensa
+```
+
+there's a few different experimental targets for the curious, all defined in [`llvm/CMakeLists.txt`](https://github.com/llvm/llvm-project/blob/ca7933e47d3a3451d81e72ac174dcb5aa28b59d1/llvm/CMakeLists.txt#L541-L547):
+```
+set(LLVM_ALL_EXPERIMENTAL_TARGETS
+  ARC
+  CSKY
+  DirectX
+  M68k
+  Xtensa
+)
+```
+
+the build completed without any issues. after that, i compiled zig from a checkout, again following patterns established in `README.md`:
+```bash
+git checkout 0.17.1
+mkdir build && cd build
+cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=$HOME/local/llvm22-xtensa \
+  -DZIG_EXTRA_BUILD_ARGS="-Dllvm-has-xtensa"
+cmake --build . --parallel
+```
+
+that was all it took to get a zig compiler which could emit xtensa machine code!
+```bash
+~/code/zig-inkplate: ~/code/zig/build/stage3/bin/zig build-lib \
+  --show-builtin \
+  -target xtensa-freestanding-none \
+  -mcpu=esp32
+```
+```zig
+const std = @import("std");
+pub const zig_version = std.SemanticVersion.parse(zig_version_string) catch unreachable;
+pub const zig_version_string = "0.17.1";
+pub const zig_backend = std.lang.CompilerBackend.stage2_llvm;
+
+pub const output_mode: std.lang.OutputMode = .Lib;
+pub const link_mode: std.lang.LinkMode = .static;
+pub const unwind_tables: std.lang.UnwindTables = .async;
+pub const is_test = false;
+pub const single_threaded = false;
+/// Deprecated; to be removed in 0.18.0. Use `target.abi` instead.
+pub const abi: std.Target.Abi = .none;
+/// Deprecated; to be removed in 0.18.0. Use `target.cpu` instead.
+pub const cpu: std.Target.Cpu = .{
+    .arch = .xtensa,
+    .model = &std.Target.xtensa.cpu.esp32,
+    .features = std.Target.xtensa.featureSet(&.{
+      // ...
+    }),
+};
+```
+
+# using `build.zig` to build object files for xtensa
+
+i was quite mesmerized by the [zig build system](https://ziglang.org/learn/build-system/)!
+{% <quote> %}
+The Zig Build System provides a cross-platform, dependency-free way to declare the logic required to build a project. With this system, the logic to build a project is written in a build.zig file, using the Zig Build System API to declare and configure build artifacts and other tasks. 
+{% </quote> %}
+
+to start, i needed to represent the `arduino/wrapper.h` header file that i'll be referring to from `demo.zig`:
+```c
+#ifndef INKPLATE_SHIM_H
+#define INKPLATE_SHIM_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void display_begin(void);
+void display_display(void);
+void display_clear(void);
+void display_set_cursor(int x, int y);
+void display_print(const char *text);
+void serial_print(const char *text);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+```
+
+this header file contains the function signatures for the symbols i'll be calling. the implementation of these functions is in `arduino/wrapper.cpp`, which the linker will use to resolve relocations in our zig object file at the final compilation stage.
+
+here's how we specify `wrapper.h`:
+```zig
+const target = b.resolveTargetQuery(.{
+    .cpu_arch = .xtensa,
+    .os_tag = .freestanding,
+    .abi = .none,
+    .cpu_model = .{ .explicit = &std.Target.xtensa.cpu.esp32 },
+});
+
+const optimize: std.builtin.Optimize = .Debug;
+
+const inkplate = b.addTranslateC(.{
+    .root_source_file = b.path("arduino/wrapper.h"),
+    .target = target,
+    .optimize = optimize,
+    .link_libc = false,
+});
+```
+
+- we use `resolveTargetQuery` to specify the architecture,
+- we set the optimization level to `.Debug`, and
+- we use `addTranslateC` to import `arduino/wrapper.h`
+
+we can use this value, `inkplate`, to define a module which *imports* the C header definitions as a translated zig module:
+```zig
+const app_module = b.createModule(.{
+    .root_source_file = b.path("zig/demo.zig"),
+    .target = target,
+    .optimize = optimize,
+    .imports = &.{
+        .{
+            .name = "inkplate",
+            .module = inkplate.createModule(),
+        },
+    },
+});
+```
+
+and finally, `demo.zig` can import `inkplate` to access the library functions through a structured module interface:
+```zig
+const inkplate = @import("inkplate");
+
+export fn zig_app_setup() void {
+    inkplate.serial_print("starting!");
+    inkplate.display_begin();
+    inkplate.display_clear();
+}
+
+export fn zig_app_loop() void {
+    inkplate.display_set_cursor(100, 0);
+    inkplate.display_print("hello world");
+    inkplate.display_display();
+}
+```
+
+and once we have our compiled module, we can tell `build.zig` to generate an object file with `addObject`:
+```zig
+const app = b.addObject(.{
+    .name = "zig_app",
+    .root_module = app_module,
+});
+```
+
+that's almost all of the code in the whole project! clearly, we're not doing very much, but the goal is to see what's possible before we get ambitious.
 
 # `fixup value must be 4-byte aligned`
 
-i kept tinkering with `build.zig` and eventually got to a state where i was *almost* always hitting this compiler error:
+i had a persistent and frustrating issue while i was tinkering with `build.zig`. i was *almost* always hitting this compiler error:
 ```bash
 ~/code/zig-inkplate: ~/code/zig/build/stage3/bin/zig build firmware
 firmware
@@ -66,20 +259,20 @@ firmware transitive failure
    └─ compile obj zig_app debug xtensa-freestanding-none failure
 ```
 
-i was getting strange and intermittent behavior. i tried to isolate to the smallest reproducible case i could find, but the error was inconsistent. sometimes i could compile calling inkplate API functions from my shim with no issues:
+the behavior was strange and intermittent. i tried to isolate to the smallest reproducible case i could find, but failure was inconsistent. sometimes i could compile calling inkplate API functions from my shim with no issues:
 
 ```bash
 cat zig/demo.zig && ~/code/zig/build/stage3/bin/zig build firmware
 ```
 ```zig
-const shim = @import("shim");
+const inkplate = @import("inkplate");
 
 export fn zig_app_setup() void {
-    shim.serial_print("hello world");
+    inkplate.serial_print("hello world");
 }
 
 export fn zig_app_loop() void {
-    shim.serial_print("hello world");
+    inkplate.serial_print("hello world");
 }
 ```
 ```
@@ -89,7 +282,9 @@ Sketch uses 957503 bytes (30%) of program storage space. Maximum is 3145728 byte
 Global variables use 90156 bytes (27%) of dynamic memory, leaving 237524 bytes for local variables. Maximum is 327680 bytes.
 ```
 
-i tried experimenting with different `callconv` expressions, using `addTranslateC` in build.zig, but nothing worked seemed to work consistently.
+other times, the same code failed!
+
+i tried experimenting with different `callconv` expressions, using `addTranslateC` in `build.zig`, but nothing seemed to work consistently.
 ```bash
 cat zig/demo.zig && ~/code/zig/build/stage3/bin/zig build-obj zig/demo.zig \
     -target xtensa-freestanding-none -mcpu=esp32 \
@@ -111,226 +306,329 @@ error: <unknown>:0: fixup value must be 4-byte aligned
 exit=1
 ```
 
-at the time, i worked through the issue with some LLM-assistance: after explaining my predicament, an open weight model was able to isolate the issue in the LLVM source code, identify the problem, and to apply a patch which fixed my compilation issues without little prompting.
+in a sense, i admitted defeat. at the time, i worked through the issue with some LLM assistance: after explaining my predicament, an open weight model was able to isolate the issue in the LLVM source code, identify the problem, and to apply a patch which fixed my compilation issues with little prompting.
 
-since then, i've spent some time studying:
-- why did this error occur?
-- what was the code causing even trying to do?
-- why does the fix solve the problem?
+this turned out to be a [known issue](https://github.com/llvm/llvm-project/issues/190204) which is [fixed upstream](https://github.com/llvm/llvm-project/pull/200132), but not in the `22.x` release that i was targeting. since i was already compiling my own LLVM, i just included an `llvm.patch` in my repository:
 
-i learned about the Xtensa ISA, the `l32r` instruction, and LLVM compilers internals like `MCFixup`. if you're interested in that kind of thing, keep reading!
+```diff
+diff --git a/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp b/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp
+index 0ea70cff4..1dbc36f8a 100644
+--- a/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp
++++ b/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp
+@@ -90,6 +90,7 @@ void XtensaTargetELFStreamer::emitLiteral(MCSymbol *LblSym, const MCExpr *Value,
 
----
+     MCSection *ConstSection = Context.getELFSection(
+         SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
++    ConstSection->setAlignment(Align(4));
 
-# the llvm experimental xtensa backend
+     OutStreamer.pushSection();
+     OutStreamer.switchSection(ConstSection);
+@@ -112,6 +113,7 @@ void XtensaTargetELFStreamer::startLiteralSection(MCSection *BaseSection) {
+       SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
 
-to translate your LLVM IR into machine code for a particular target, you'll need a backend for that architecture.
+   ConstSection->setAlignment(Align(4));
++  getStreamer().switchSection(ConstSection);
+ }
 
-{% <quote cite="[[RFC] Tensilica Xtensa (ESP32 Backend)](https://discourse.llvm.org/t/rfc-tensilica-xtensa-esp32-backend/57835)"> %}
-Hi All!
+ MCELFStreamer &XtensaTargetELFStreamer::getStreamer() {
+diff --git a/llvm/test/MC/Xtensa/directive-literal.s b/llvm/test/MC/Xtensa/directive-literal.s
+index 269cf20ed..1dd9c252d 100644
+--- a/llvm/test/MC/Xtensa/directive-literal.s
++++ b/llvm/test/MC/Xtensa/directive-literal.s
+@@ -21,6 +21,7 @@ test_literal:
 
-On behalf of Espressif Systems, I would like to propose Xtensa backend to be added as an experimental to LLVM project.
-{% </quote> %}
+ # CHECK-LITERAL: Section {
+ # CHECK-LITERAL:   Name: .literal
++# CHECK-LITERAL:   AddressAlignment: 4
+ # CHECK-LITERAL:   SectionData (
+ # CHECK-LITERAL:     0000: 78563412 00000000 30750000
+ # CHECK-LITERAL:   )
+```
 
-# viewing the assembly for our zig code
+recompiling llvm and zig with this patch resolved my fixup woes :)
 
-we'll use this file as our example:
+# exploring the zig object file
+
+i added a small section to `build.zig` so that we could inspect the object file:
 ```zig
-~/code/zig-inkplate: cat test.zig
-extern fn serial_print(text: [*:0]const u8) callconv(.c) void;
-
-export fn zig_app_setup() void {
-    serial_print("starting!");
-}
-
-export fn zig_app_loop() void {}
+const objectFile = b.step("object-file", "Compile zig object file");
+objectFile.dependOn(&b.addInstallFile(
+    app.getEmittedBin(),
+    "obj/zig_app.o",
+).step);
 ```
 
-this code links to an external function `serial_print` and calls it with a string. it's ok that we didn't provide a definition for `serial_print` - this is the shape we expect for our zig code, as C++ will provide the implementation for these symbols when we build our firmware image.
-
-we can run `zig build-obj` with the `-emit-asm` option to see the assembly for `test.zig_app_setup`:
-```asm
-test.zig_app_setup:
-.Lfunc_begin1:
-        .cfi_startproc
-        .loc    6 4 17 prologue_end
-        entry   a1, 32
-        or      a7, a1, a1
-        .cfi_def_cfa a7, 32
-        l32r    a10, .LCPI1_0
-        l32r    a8, .LCPI1_1
-        callx8  a8
-        retw.n
+this uses the default installation directory, `zig-out`:
+```
+~/code/zig-inkplate: file zig-out/obj/zig_app.o
+zig-out/obj/zig_app.o: ELF 32-bit LSB relocatable, Tensilica Xtensa, version 1 (SYSV), with debug_info, not stripped
 ```
 
-# what is a fixup?
+that looks correct! with `xtensa-esp32-elf-objdump` (which came with my `soldered-inkplate-boards` installation), we can even see the assembly:
 
-["fixups"](https://www.embecosm.com/appnotes/ean10/html/ch06s02.html)  represent *currently-unknown instruction data* during instruction encoding. often, the assembler knows that it needs to place instruction, but the data to which the instruction refers to isn't available. this can occur with external symbols, such as `serial_print` (linkage), or with data literals that may be present in other sections of the file (placement).
+```objdump
+zig-out/obj/zig_app.o:     file format elf32-xtensa-le
 
-if these fixup values do eventually become known, the assembler can replace them with concrete memory locations during [relaxation](https://eli.thegreenplace.net/2013/01/03/assembler-relaxation). values that cannot be resolved are converted to [relocations](https://en.wikipedia.org/wiki/Relocation_(computing)), which the linker will handle when appropriate symbols become resolvable.
 
-"fixups" are an assembler internal, while relocations exist concretely as bytes inside binaries. [every relocation was once a fixup!](https://github.com/lowRISC/riscv-llvm/blob/master/docs/06-relocations-and-fixups.mkd) relocations are visible inside object files with tools like `objdump` or `readelf`, and usually have named sections (such as `SHT_RELA` and `SHT_REL` in ELF).
+Disassembly of section .text:
 
-the fixup type we're dealing with in this error is an `MCFixup` instance:
-{% <quote cite="[`llvm/include/llvm/MC/MCFixup.h`](https://github.com/llvm/llvm-project/blob/ca7933e47d3a3451d81e72ac174dcb5aa28b59d1/llvm/include/llvm/MC/MCFixup.h#L47-L81)"> %}
+    00000000 <zig_app_loop>:
+   0:	004136        	entry	a1, 32
+   3:	207110        	or	a7, a1, a1
+   6:	ffff81        	l32r	a8, 4 <zig_app_loop+0x4> (ff812071 <Target.xtensa.cpu.esp32+0xff811d11>)
+			6: R_XTENSA_SLOT0_OP	.literal
+   9:	64a0a2        	movi	a10, 100
+   c:	00a0b2        	movi	a11, 0
+   f:	0008e0        	callx8	a8
+  12:	ffffa1        	l32r	a10, 10 <zig_app_loop+0x10> (ffa10008 <Target.xtensa.cpu.esp32+0xffa0fca8>)
+			12: R_XTENSA_SLOT0_OP	.literal+0x4
+  15:	ffff81        	l32r	a8, 14 <zig_app_loop+0x14> (ffff81ff <Target.xtensa.cpu.esp32+0xffff7e9f>)
+			15: R_XTENSA_SLOT0_OP	.literal+0x8
+  18:	0008e0        	callx8	a8
+  1b:	ffff81        	l32r	a8, 18 <zig_app_loop+0x18> (810008e0 <Target.xtensa.cpu.esp32+0x81000580>)
+			1b: R_XTENSA_SLOT0_OP	.literal+0xc
+  1e:	0008e0        	callx8	a8
+  21:	f01d      	retw.n
+	...
+
+00000024 <zig_app_setup>:
+  24:	004136        	entry	a1, 32
+  27:	207110        	or	a7, a1, a1
+  2a:	ffffa1        	l32r	a10, 28 <zig_app_setup+0x4> (ffa12071 <Target.xtensa.cpu.esp32+0xffa11d11>)
+			2a: R_XTENSA_SLOT0_OP	.literal+0x10
+  2d:	ffff81        	l32r	a8, 2c <zig_app_setup+0x8> (ffff81ff <Target.xtensa.cpu.esp32+0xffff7e9f>)
+			2d: R_XTENSA_SLOT0_OP	.literal+0x14
+  30:	0008e0        	callx8	a8
+  33:	ffff81        	l32r	a8, 30 <zig_app_setup+0xc> (810008e0 <Target.xtensa.cpu.esp32+0x81000580>)
+			33: R_XTENSA_SLOT0_OP	.literal+0x18
+  36:	0008e0        	callx8	a8
+  39:	ffff81        	l32r	a8, 38 <zig_app_setup+0x14> (ffff8100 <Target.xtensa.cpu.esp32+0xffff7da0>)
+			39: R_XTENSA_SLOT0_OP	.literal+0x1c
+  3c:	0008e0        	callx8	a8
+  3f:	f01d      	retw.n
+
+Disassembly of section .literal:
+
+00000000 <.literal>:
+	...
+			0: R_XTENSA_32	display_set_cursor
+			4: R_XTENSA_32	.rodata.str1.1
+			8: R_XTENSA_32	display_print
+			c: R_XTENSA_32	display_display
+			10: R_XTENSA_32	.rodata.str1.1+0xc
+			14: R_XTENSA_32	serial_print
+			18: R_XTENSA_32	display_begin
+			1c: R_XTENSA_32	display_clear 
 ```
-/// Encode information on a single operation to perform on a byte
-/// sequence (e.g., an encoded instruction) which requires assemble- or run-
-/// time patching.
-///
-/// Fixups are used any time the target instruction encoder needs to represent
-/// some value in an instruction which is not yet concrete. The encoder will
-/// encode the instruction assuming the value is 0, and emit a fixup which
-/// communicates to the assembler backend how it should rewrite the encoded
-/// value.
-///
-/// During the process of relaxation, the assembler will apply fixups as
-/// symbolic values become concrete. When relaxation is complete, any remaining
-/// fixups become relocations in the object file (or errors, if the fixup cannot
-/// be encoded on the target).
+
+we also see the relocation records that we expect in our `.literal` section, with references to the external functions that we're calling:
 ```
-{% </quote> %}
+~/code/zig-inkplate: ~/Library/Arduino15/packages/soldered-inkplate-boards/tools/esp-x32/2511/bin/xtensa-esp32-elf-objdump --reloc -j .literal zig-out/obj/zig_app.o
 
-while it wasn't clear i was expecting to see some relocations in my object file.
+zig-out/obj/zig_app.o:     file format elf32-xtensa-le
 
-`build.zig` was configured to create an object file `zig_app` using `wrapper.h` (not `wrapper.cpp`!), so the implementation for the external functions `demo.zig` called was not available to LLVM or the zig compiler:
+RELOCATION RECORDS FOR [.literal]:
+OFFSET   TYPE              VALUE
+00000000 R_XTENSA_32       display_set_cursor
+00000004 R_XTENSA_32       .rodata.str1.1
+00000008 R_XTENSA_32       display_print
+0000000c R_XTENSA_32       display_display
+00000010 R_XTENSA_32       .rodata.str1.1+0x0000000c
+00000014 R_XTENSA_32       serial_print
+00000018 R_XTENSA_32       display_begin
+0000001c R_XTENSA_32       display_clear
+```
+
+this is great!
+
+# running `arduino-cli` from `build.zig`
+
+i'm still using `arduino-cli` to compile and upload my code, but i'll be supplying my zig object file to arduino with the `build.extra_libs` option that my board defines in `boards.txt`:
+```
+Inkplate4TEMPERA.build.f_cpu=240000000L
+Inkplate4TEMPERA.build.flash_size=4MB
+Inkplate4TEMPERA.build.flash_freq=80m
+Inkplate4TEMPERA.build.flash_mode=qio
+Inkplate4TEMPERA.build.boot=dio
+Inkplate4TEMPERA.build.partitions=huge_app
+Inkplate4TEMPERA.build.custom_partitions=huge_app
+Inkplate4TEMPERA.build.defines=-DBOARD_HAS_PSRAM -mfix-esp32-psram-cache-strategy=memw
+Inkplate4TEMPERA.build.extra_libs=
+Inkplate4TEMPERA.build.memory_type=qio_qspi
+```
+
+in `build.zig`, that's a regular function, which takes our `*std.Build.Step.Compile` as input, and specifies the compilation step as a dependency in the build DAG with `dependOn`:
 ```zig
-    const inkplate = b.addTranslateC(.{
-        .root_source_file = b.path("arduino/wrapper.h"),
-        .target = target,
-        .optimize = optimize,
-        .link_libc = false,
+fn arduinoCompile(
+    b: *std.Build,
+    app: *std.Build.Step.Compile,
+    upload: bool,
+    port: ?[]const u8,
+) *std.Build.Step {
+    const cmd = b.addSystemCommand(&.{
+        "arduino-cli",
+        "compile",
+        "--fqbn",
+        "soldered-inkplate-boards:esp32:Inkplate4TEMPERA:UploadSpeed=115200",
+        "--output-dir",
+        "build",
+        "arduino",
     });
-
-    const app_module = b.createModule(.{
-        .root_source_file = b.path("zig/demo.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{
-            .{
-                .name = "inkplate",
-                .module = inkplate.createModule(),
-
-            },
-        },
-    });
-
-    const app = b.addObject(.{
-        .name = "zig_app",
-        .root_module = app_module,
-    });
-```
-
-this means i expect the object file `zig_app.o` to *have relocations for the external functions i call from `wrapper.h`* when compiled successfully, which the linker will eventually handle.
-
-# `XtensaAsmBackend::adjustFixupValue`
-
-with that context provided, i can reveal that our error is emitted from the `XtensaAsmBackend` `adjustFixupValue` function!
-{% <quote cite="[`llvm/lib/Target/Xtensa/MCTargetDesc/XtensaAsmBackend.cpp`](https://github.com/llvm/llvm-project/blob/ca7933e47d3a3451d81e72ac174dcb5aa28b59d1/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaAsmBackend.cpp#L117-L125)"> %}
-```c++
-case Xtensa::fixup_xtensa_l32r_16:
-  unsigned Offset = Fixup.getOffset();
-  if (Offset & 0x3)
-    Value -= 4;
-  if (!isInt<18>(Value) && (Value & 0x20000))
-    Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-  if (Value & 0x3)
-    Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned");
-  return (Value & 0x3fffc) >> 2;
-```
-{% </quote> %}
-
-`Xtensa::fixup_xtensa_l32r_16` is a particular `Kind` of `MCFixup` value, for an `xtensa` instruction, `l32r` in particular. `l32r` is short for "Load 32-bit PC-Relative":
-
-> L32R is a PC-relative 32-bit load from memory. It is typically used to load constant values into a register when the constant cannot be encoded in a MOVI instruction.
-
-it loads with an offset relative to the current program counter, so it can specify any address up to 256KB *before* its location:
-
-{% <quote cite="Xtensa Instruction Set Architecture (ISA) Reference Manual"> %}
-L32R forms a virtual address by adding the 16-bit one-extended constant value encoded in the instruction word shifted left by two to the address of the L32R plus three with the two least significant bits cleared. Therefore, **the offset can always specify 32-bit aligned addresses from -262141 to -4 bytes from the address of the L32R instruction.** 32 bits (four bytes) are read from the physical address.
-{% </quote> %}
-
-importantly, the stored constant is shifted left by two at execution time, which effectively multiplies it by 4 (`2^2=4`). this means the encoder must *divide* the byte distance by 4 to fit it into the field. if the byte distance of the data from the instruction cannot be divided by 4, it can't be represented, which is what the fixup error means: "value must be 4-byte aligned".
-
-this makes sense given what we know about `l32r`, as the instruction's word can only be determined once we've placed the data literal it refers to.
-
-what emits those literals? `XtensaAsmPrinter::emitConstantPool()`! 
-{% <quote cite=""> %}
-```c++
-// EmitConstantPool - Print to the current output stream assembly
-// representations of the constants in the constant pool MCP. This is
-// used to print out constants which have been "spilled to memory" by
-// the code generator.
-void XtensaAsmPrinter::emitConstantPool() {
-  const Function &F = MF->getFunction();
-  const MachineConstantPool *MCP = MF->getConstantPool();
-  const std::vector<MachineConstantPoolEntry> &CP = MCP->getConstants();
-  if (CP.empty())
-    return;
-
-  OutStreamer->pushSection();
-
-  auto *TS =
-      static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
-  MCSection *CS = getObjFileLowering().SectionForGlobal(&F, TM);
-  TS->startLiteralSection(CS);
-
-  int CPIdx = 0;
-  for (const MachineConstantPoolEntry &CPE : CP) {
-    emitMachineConstantPoolEntry(CPE, CPIdx++);
-  }
-
-  OutStreamer->popSection();
+    if (upload) {
+        cmd.addArgs(&.{"--upload"});
+        if (port) |p| cmd.addArgs(&.{ "-p", p });
+    }
+    cmd.addPrefixedFileArg(
+        "--build-property=build.extra_libs=",
+        app.getEmittedBin(),
+    );
+    cmd.step.dependOn(&app.step);
+    return &cmd.step;
 }
 ```
-{% </quote> %}
 
-// TODO: ?
-these constants go in their own section, which is created by `XtensaTargetElfStreamer::startLiteralSection`:
-{% <quote cite="[`llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp`](https://github.com/llvm/llvm-project/blob/ca7933e47d3a3451d81e72ac174dcb5aa28b59d1/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp#L106-L115)"> %}
+this function supports compiling *and* uploading the firmware (which just means adding the `--upload` flag to `arduino-cli` and ensuring that the port is defined).
+
+i'm using `addSystemCommand` to generate a step which executes `arduino-cli`, using the same `std.Build.Step.Compile.getEmittedBin()` function that we called earlier.
+
+with the `--verbose` flag, we can see every command expanded:
+```bash
+~/code/zig-inkplate: ~/code/zig/build/stage3/bin/zig build --verbose firmware
+info(verbose): /Users/jstrickland/code/zig/build/stage3/bin/zig translate-c --cache-dir .zig-cache --global-cache-dir /Users/jstrickland/.cache/zig -target xtensa-freestanding-none arduino/wrapper.h --listen=-
+info(verbose): /Users/jstrickland/code/zig/build/stage3/bin/zig build-obj -Odebug -target xtensa-freestanding-none -mcpu esp32 --dep inkplate -Mroot=zig/demo.zig -Odebug -target xtensa-freestanding-none -mcpu esp32 -Minkplate=.zig-cache/o/00e12ac7c5dbf7a53b0c396b9e778995/wrapper.zig --cache-dir .zig-cache --global-cache-dir /Users/jstrickland/.cache/zig --build-root . --name zig_app --zig-lib-dir /Users/jstrickland/code/zig/build/stage3/lib/zig/ --listen=-
+info(verbose): install -C .zig-cache/o/ea79841169e767eb0e7e077f49e5da16/zig_app.o zig-out/obj/zig_app.o
+info(verbose): arduino-cli compile --fqbn soldered-inkplate-boards:esp32:Inkplate4TEMPERA:UploadSpeed=115200 --output-dir build arduino --build-property=build.extra_libs=./.zig-cache/o/ea79841169e767eb0e7e077f49e5da16/zig_app.o
+...
+```
+
+- `zig translate-c` to translate `wrapper.h`,
+- `zig build-obj` to build the object file,
+- `install -C` to copy the object file to `zig-out/obj/zig_app.o`, and
+- `arduino-cli compile` with `--build-property=build.extra_libs` set!
+
+# examining the firmware
+
+i'm using the `--output-dir build` argument with `arduino-cli`, so there's a lot of build artifacts leftover for us to explore:
+
+```
+~/code/zig-inkplate: file build/arduino.ino.elf
+build/arduino.ino.elf: ELF 32-bit LSB executable, Tensilica Xtensa, version 1 (SYSV), statically linked, with debug_info, not stripped
+```
+
+instead of a relocatable, it's an executable!
+
+there are a LOT of functions in this binary, but we can locate our zig functions with `xtensa-esp32-elf-objdump -df build/arduino.ino.elf | grep '<zig_app_loop>:' -A 12`:
+```objdump
+400dcdc0 <zig_app_loop>:
+400dcdc0:	004136        	entry	a1, 32
+400dcdc3:	207110        	or	a7, a1, a1
+400dcdc6:	cede81        	l32r	a8, 400d0940 <_stext+0x920> (400d27d8 <display_set_cursor>)
+400dcdc9:	64a0a2        	movi	a10, 100
+400dcdcc:	00a0b2        	movi	a11, 0
+400dcdcf:	0008e0        	callx8	a8
+400dcdd2:	cedca1        	l32r	a10, 400d0944 <_stext+0x924> (3f401bf8 <__anon_1059>)
+400dcdd5:	cedc81        	l32r	a8, 400d0948 <_stext+0x928> (400d27e8 <display_print>)
+400dcdd8:	0008e0        	callx8	a8
+400dcddb:	cedc81        	l32r	a8, 400d094c <_stext+0x92c> (400d27bc <display_display>)
+400dcdde:	0008e0        	callx8	a8
+400dcde1:	f01d      	retw.n
+```
+
+if you look closely, you can see that the previous `l32r` instructions have become concrete!
+
+here's what we had before (`zig_app.o`), with intermediate instructions removed for clarity:
+```objdump
+   6:	ffff81        	l32r	a8, 4 <zig_app_loop+0x4> (ff812071 <Target.xtensa.cpu.esp32+0xff811d11>)
+			6: R_XTENSA_SLOT0_OP	.literal
+  12:	ffffa1        	l32r	a10, 10 <zig_app_loop+0x10> (ffa10008 <Target.xtensa.cpu.esp32+0xffa0fca8>)
+			12: R_XTENSA_SLOT0_OP	.literal+0x4
+  15:	ffff81        	l32r	a8, 14 <zig_app_loop+0x14> (ffff81ff <Target.xtensa.cpu.esp32+0xffff7e9f>)
+			15: R_XTENSA_SLOT0_OP	.literal+0x8
+  1b:	ffff81        	l32r	a8, 18 <zig_app_loop+0x18> (810008e0 <Target.xtensa.cpu.esp32+0x81000580>)
+			1b: R_XTENSA_SLOT0_OP	.literal+0xc
+```
+
+(in this case, the `l32r` targets are placeholders, with `R_XTENSA_SLOT0_OP` being their eventual true binding)
+
+and here's our final firmware (`arduino.ino.elf`), when the object file `zig_app.o` has been compiled away:
+```objdump
+400dcdc6:	cede81        	l32r	a8, 400d0940 <_stext+0x920> (400d27d8 <display_set_cursor>)
+400dcdd2:	cedca1        	l32r	a10, 400d0944 <_stext+0x924> (3f401bf8 <__anon_1059>)
+400dcdd5:	cedc81        	l32r	a8, 400d0948 <_stext+0x928> (400d27e8 <display_print>)
+400dcddb:	cedc81        	l32r	a8, 400d094c <_stext+0x92c> (400d27bc <display_display>)
+```
+
+we can see the relocations resolve their references:
+- `R_XTENSA_SLOT0_OP .literal+0x0` refers to `<display_set_cursor>`
+- `R_XTENSA_SLOT0_OP .literal+0x4` refers to `<__anon_1059>`
+- `R_XTENSA_SLOT0_OP .literal+0x8` refers to `<display_print>`
+- `R_XTENSA_SLOT0_OP .literal+0xC` refers to `<display_display>`
+
+this matches the offsets in our relocation record from `zig_app.o` exactly:
+```
+RELOCATION RECORDS FOR [.literal]:
+OFFSET   TYPE              VALUE
+00000000 R_XTENSA_32       display_set_cursor
+00000004 R_XTENSA_32       .rodata.str1.1
+00000008 R_XTENSA_32       display_print
+0000000c R_XTENSA_32       display_display
+00000010 R_XTENSA_32       .rodata.str1.1+0x0000000c
+00000014 R_XTENSA_32       serial_print
+00000018 R_XTENSA_32       display_begin
+0000001c R_XTENSA_32       display_clear
+```
+
+# running it on the inkplate
+
+i suppose i haven't shown you the implementation of the C++ wrapper, `wrapper.cpp`! it's very simple:
 ```c++
-void XtensaTargetELFStreamer::startLiteralSection(MCSection *BaseSection) {
-  MCContext &Context = getStreamer().getContext();
+#include "wrapper.h"
+#include <Arduino.h>
+#include <Inkplate.h>
 
-  std::string SectionName = getLiteralSectionName(BaseSection->getName());
+static Inkplate display(INKPLATE_1BIT);
 
-  MCSection *ConstSection = Context.getELFSection(
-      SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
-
-  ConstSection->setAlignment(Align(4));
+extern "C" {
+void display_begin() {
+  display.begin();
+  display.frontlight.setState(true);
+  display.frontlight.setBrightness(5);
+  display.setTextSize(2);
+  display.setTextColor(BLACK);
+}
+void display_display() { display.display(); }
+void display_clear() { display.clearDisplay(); }
+void display_set_cursor(int x, int y) { display.setCursor(x, y); }
+void display_print(const char *text) { display.print(text); }
+void serial_print(const char *text) { Serial.print(text); }
 }
 ```
-{% </quote> %}
 
-we can see that it's setting the alignment to 4 already! it looks like it's operation on a `ConstSection` with a name retrieved by `getLiteralSectionName`. let's look at that function as well: 
-
-<!-- ~/code/llvm-project-22/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp -->
-{% <quote cite="[TODO](https://github.com/llvm/llvm-project/blob/ca7933e47d3a3451d81e72ac174dcb5aa28b59d1/llvm/lib/Target/Xtensa/MCTargetDesc/XtensaTargetStreamer.cpp#L106-L115)"> %}
+our `arduino.ino` is even smaller, and just calls `zig_app_setup` and `zig_app_loop`, which are using the `wrapper.cpp` implementation in our compiled firmware:
 ```c++
-static std::string getLiteralSectionName(StringRef CSectionName) {
-  std::size_t Pos = CSectionName.find(".text");
-  std::string SectionName;
-  if (Pos != std::string::npos) {
-    SectionName = CSectionName.substr(0, Pos);
+#include <Arduino.h>
+#include <Inkplate.h>
 
-    if (Pos > 0)
-      SectionName += ".text";
+extern "C" void zig_app_setup();
+extern "C" void zig_app_loop();
 
-    CSectionName = CSectionName.drop_front(Pos);
-    CSectionName.consume_front(".text");
-
-    SectionName += ".literal";
-    SectionName += CSectionName;
-  } else {
-    SectionName = CSectionName;
-    SectionName += ".literal";
-  }
-  return SectionName;
+void setup() {
+  Serial.begin(115200);
+  zig_app_setup();
 }
+
+void loop() { zig_app_loop(); }
 ```
-{% </quote> %}
 
----
+i feel comfortable writing this amount of C++.
 
-sources :
-- https://stackoverflow.com/questions/19532826/what-does-a-dangerous-relocation-error-mean
+thank you for reading so far! while it's not the most exciting, here is a picture of "hello world" from zig running on the e-ink hardware:
+
+{{ <figure src="/img/zig_inkplate_hello_world.png" alt="picture of the e-ink screen running our compiled firmware showing 'hello world'"/> }}
+
+the code discussed is available on github:
+- https://github.com/djanatyn/zig-inkplate
+
+i haven't ported anything to zig just yet, but knowing that i can fills me with a deep sense of satisfaction, power, and ambition.
+
+i'm only at the start of my journey with zig!
