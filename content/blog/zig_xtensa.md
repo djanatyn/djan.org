@@ -627,7 +627,7 @@ thank you for reading so far! while it's not the most exciting, here is a pictur
 {{ <figure src="/img/zig_inkplate_hello_world.png" alt="picture of the e-ink screen running our compiled firmware showing 'hello world'"/> }}
 
 the code discussed is available on github:
-- https://github.com/djanatyn/zig-inkplate
+- [djanatyn/zig-inkplate](https://github.com/djanatyn/zig-inkplate)
 
 i haven't ported anything to zig just yet, but knowing that i can fills me with a deep sense of satisfaction, power, and ambition.
 

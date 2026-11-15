@@ -555,7 +555,7 @@ zig has &lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://zi
 &lt;img src=&quot;/img/zig_inkplate_hello_world.png&quot; alt=&quot;picture of the e-ink screen running our compiled firmware showing &#39;hello world&#39;&quot;&gt;&lt;/figure&gt;
 &lt;p&gt;the code discussed is available on github:&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;https://github.com/djanatyn/zig-inkplate&lt;/li&gt;
+&lt;li&gt;&lt;a rel=&quot;nofollow noreferrer external&quot; href=&quot;https://github.com/djanatyn/zig-inkplate&quot;&gt;djanatyn/zig-inkplate&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;i haven&#39;t ported anything to zig just yet, but knowing that i can fills me with a deep sense of satisfaction, power, and ambition.&lt;/p&gt;
 &lt;p&gt;i&#39;m only at the start of my journey with zig!&lt;/p&gt;
