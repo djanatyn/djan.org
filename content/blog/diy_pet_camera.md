@@ -2,7 +2,7 @@
 title = "creating a DIY privacy-respecting remote pet camera system"
 description = "tailscale, frigate, openwrt"
 date = 2026-11-14
-draft = true
+draft = false
 
 [taxonomies]
 categories = ["lab notebook"]
@@ -11,22 +11,52 @@ categories = ["lab notebook"]
 toc = false
 code_copy = true
 comment = false
-<!-- og_image = "/img/zig_inkplate_hello_world.png"  -->
 +++
 
 # the problem
 
-# don't let the camera do evil stuff
+i had a scary situation while traveling earlier this year where my cat went missing while i was on vacation! none of my petsitters could find domino, and he wasn't located until we got him and found him hiding in a closet in our building's basement.
+
+as you can imagine, that was a traumatic experience for everybody involved. i was so happy to be reunited with domino, but so concerned by the lack of answers: when did he get out? how long had he been gone?
+
+i'm happy to report that domino is in good health after that adventure, AND i created a small secure DIY pet camera system that i can access remotely when i travel!
+
+
+# why not just use a normal pet camera?
+
+i knew that i didn't want to use a commodity IoT pet camera device with a cloud-based service. these devices send audio and video of your home to servers outside of your control. i'm not comfortable with that level of trust, and [history shows](https://www.nytimes.com/wirecutter/reviews/wyze-security-breach/) that breaches can and do happen, with frightening outcomes:
+
+{% <quote cite="[Cute Surveillance: Embodiment, Subjectivity, and Intimacy in Samanta Schweblin’s Little Eyes](https://www.researchgate.net/publication/397455313_Cute_Surveillance_Embodiment_Subjectivity_and_Intimacy_in_Samanta_Schweblin's_Little_Eyesem)"> %}
+In February 2024, approximately thirteen thousand users of Wyze security cameras received footage of someone else’s home due to a malfunction in their device’s camera feed. Wyze’s second data breach in less than six months, the incident followed a glitch in September the previous year in response to which several consumers voiced their concern on the social news website Reddit. One person alarmingly wrote ‘I don’t know why, but I can see someone else’s camera,’ while another posted, ‘Apologies if this is your house.’
+{% </quote> %}
+
+outside of any unintentional breaches, pet cameras that send video and audio footage to a centralized cloud-based service will often retain your data, and may share that data with others without your consent:
+
+{% <quote cite="[No One, Including Our Furry Friends, Will Be Safer in Ring's Surveillance Nightmare](https://www.eff.org/deeplinks/2026/02/no-one-including-our-furry-friends-will-be-safer-rings-surveillance-nightmare-0)">%}
+The company has made law enforcement access a regular part of its business. As early as 2016, the company was courting police departments through free giveaways. The company provided law enforcement warrantless access to people’s footage, a practice they claimed to cut off in 2024. Not long after, though, the company established partnerships with major police companies Axon and Flock Safety to facilitate the integration of Ring cameras into police intelligence networks. The partnership allows law enforcement to again request Ring footage directly from users. This supplements the already wide-ranging apparatus of data and surveillance feeds now available to law enforcement.
+{% </quote> %}
+
+while that report was about Amazon's Ring cameras, and there are other cameras that exist which may respect your privacy more, **trusting an external service to handle your most intimate data** is the core problem.
+
+even if you trust a service today, that service [could be sold to another company you *don't* trust](https://www.sec.gov/Archives/edgar/data/1018724/000101872419000004/amzn-20181231x10k.htm) next week!
+
+this meant that i wanted to store **all of my video data locally**. none of the video goes to any external service: instead, i planned to [connect to my home network using tailscale](https://tailscale.com/) to access an [open-source self-hosted web interface](https://frigate.video/) to view the camera footage.
+
+# don't trust the cameras
+
+even if i wasn't using a pet camera product with a centralized service, i also wanted to avoid trusting the cameras themselves!
+
+modern IP cameras are [IoT devices](https://en.wikipedia.org/wiki/Internet_of_things). they usually attempt to acquire IP addresses over DHCP, they host their own web interfaces, and they run their own proprietary firmware.
+
+there is a rich tradition of exploiting security vulnerabilities on the firmware of IoT devices. the related works section from the paper ["A case of smart devices that compromise home cybersecurity"](https://www.sciencedirect.com/science/article/pii/S0167404824005923) 
+
+to mitigate much of this risk, i chose to place my cameras on an isolated network segment, and to use my OpenWRT router's firewall to block communication with the manufacturer's servers.
 
 # picking cameras
 
 # buying a power-over-ethernet switch
 
 # configuring firewall on `openwrt`
-
-- creating zones
-- assigning a static IP to the cameras
-- assigning a static IP to 
 
 ```
 root@OpenWrt:~# cat /etc/config/firewall
